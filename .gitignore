@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Odoo
+*.log
+*.pid
+*.pyc
+*.pyo
+*.swp
+*.swo
+*.zip
+*.egg-info/
+*.egg
+*.mo
+
+# Environment
+.env
+venv/
+*.env
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project

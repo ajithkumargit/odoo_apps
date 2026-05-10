@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="sale_order_view_tree_view" model="ir.ui.view">
+        <field name="name">sale.order.view.tree_</field>
+        <field name="model">sale.order</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="sale_order_view_form" model="ir.ui.view">
+        <field name="name">sale.order.view.form</field>
+        <field name="model">sale.order</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group string="Custom Excel Section" class="custom-sheet">
+                        <field name="name"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="actions_menu_sale_order" model="ir.actions.act_window">
+        <field name="name">sale.order.view.form</field>
+        <field name="res_model">sale.order</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="sale_order_view_tree_view"/>
+        <field name="context">{'form_view_ref': 'pos_shop.sale_order_view_form'}</field>
+        <field name="views" eval="[(ref('pos_shop.sale_order_view_tree_view'),'list'),(ref('pos_shop.sale_order_view_form'),'form')]"/>
+    </record>
+    <menuitem
+        id="sale_menuitem_"
+        name="CustomSale"
+        action="actions_menu_sale_order"
+        sequence="10"/>
+</odoo>

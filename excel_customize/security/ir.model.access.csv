@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_excel_data,excel_data,model_excel_data,,1,1,1,1
+access_file_type,file_type,model_file_type,,1,1,1,1
+access_statement_detail,statement_detail,model_statement_detail,,1,1,1,1
