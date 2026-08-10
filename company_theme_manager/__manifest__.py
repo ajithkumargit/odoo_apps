@@ -3,21 +3,9 @@
     "version": "19.0.1.0.0",
     "category": "Tools",
     "summary": "Dynamic company-specific Odoo themes",
-    "description": """
-        Company Theme Manager
-        =====================
-        Features:
-        - Different theme for each company
-        - Dynamic colors
-        - Dynamic fonts
-        - Button styling
-        - Card styling
-        - Navbar/sidebar colors
-        - Theme presets
-        - CSS variable based styling
-        - Multi-company support
-    """,
+
     "author": "AJITHKUMAR",
+    "website": "https://github.com/ajithkumargit/odoo_apps",
     "license": "LGPL-3",
     "depends": [
         "base",
