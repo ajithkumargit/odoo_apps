@@ -1,0 +1,222 @@
+:root {
+    --ctm-primary: #714B67;
+    --ctm-secondary: #FFFFFF;
+    --ctm-accent: #017E84;
+
+    --ctm-success: #28A745;
+    --ctm-warning: #FFC107;
+    --ctm-danger: #DC3545;
+    --ctm-info: #17A2B8;
+
+    --ctm-background: #F8F9FA;
+    --ctm-text: #212529;
+
+    --ctm-navbar: #714B67;
+    --ctm-navbar-text: #FFFFFF;
+
+    --ctm-apps-menu: #FFFFFF;
+    --ctm-apps-menu-text: #212529;
+    --ctm-apps-menu-hover: #F5F5F5;
+    --ctm-apps-menu-icon: #212529;
+
+    --ctm-page-background: #F8F9FA;
+    --ctm-content-background: #FFFFFF;
+
+    --ctm-sidebar: #FFFFFF;
+    --ctm-sidebar-text: #212529;
+    --ctm-sidebar-hover: #F0F0F0;
+    --ctm-sidebar-active: #E8F5E9;
+
+    --ctm-dropdown: #FFFFFF;
+    --ctm-dropdown-text: #212529;
+    --ctm-dropdown-hover: #F5F5F5;
+
+    --ctm-card: #FFFFFF;
+    --ctm-card-border: #DEE2E6;
+
+    --ctm-font: Inter;
+    --ctm-font-size: 14px;
+
+    --ctm-button-radius: 6px;
+    --ctm-input-radius: 5px;
+    --ctm-card-radius: 8px;
+    --ctm-badge-radius: 20px;
+
+    --ctm-navbar: #714B67;
+    --ctm-navbar-text: #FFFFFF;
+
+    --ctm-navbar-hover: #157347;
+    --ctm-navbar-active: #157347;
+}
+
+
+
+.o_main_navbar {
+    background-color: var(--ctm-navbar) !important;
+    color: var(--ctm-navbar-text) !important;
+}
+
+.o_main_navbar * {
+    color: var(--ctm-navbar-text) !important;
+}
+
+
+.o_web_client {
+    background-color: var(--ctm-page-background) !important;
+    color: var(--ctm-text);
+}
+
+
+.o_action_manager {
+    background-color: var(--ctm-page-background) !important;
+}
+
+
+
+.o_content {
+    background-color: var(--ctm-content-background) !important;
+}
+
+
+.o_form_view {
+    background-color: var(--ctm-content-background) !important;
+}
+
+.o_list_view {
+    background-color: var(--ctm-content-background) !important;
+}
+
+
+.o_kanban_view {
+    background-color: var(--ctm-page-background) !important;
+}
+
+.o_kanban_record {
+    background-color: var(--ctm-card) !important;
+}
+
+
+.o_navbar_apps_menu {
+    background-color: var(--ctm-apps-menu) !important;
+}
+
+.o_navbar_apps_menu * {
+    color: var(--ctm-apps-menu-text) !important;
+}
+
+
+.o_navbar_apps_menu .dropdown-item:hover {
+    background-color: var(--ctm-apps-menu-hover) !important;
+}
+
+.o_main_navbar .o_menu_sections {
+    background-color: transparent !important;
+}
+
+.dropdown-menu {
+    background-color: var(--ctm-dropdown) !important;
+    color: var(--ctm-dropdown-text) !important;
+}
+
+.dropdown-menu .dropdown-item {
+    color: var(--ctm-dropdown-text) !important;
+}
+
+.dropdown-menu .dropdown-item:hover {
+    background-color: var(--ctm-dropdown-hover) !important;
+}
+
+.btn-primary {
+    background-color: var(--ctm-primary) !important;
+    border-color: var(--ctm-primary) !important;
+    border-radius: var(--ctm-button-radius);
+}
+
+.form-control,
+.form-select {
+    border-radius: var(--ctm-input-radius);
+}
+.card {
+    background-color: var(--ctm-card);
+    border-color: var(--ctm-card-border);
+    border-radius: var(--ctm-card-radius);
+}
+body {
+    font-family: var(--ctm-font), sans-serif;
+    font-size: var(--ctm-font-size);
+}
+
+
+.o_main_navbar .o_menu_sections {
+    background-color: transparent !important;
+}
+
+
+/* Normal menu items */
+
+.o_main_navbar .o_menu_sections > * {
+    background-color: transparent !important;
+}
+
+
+/* Active menu item */
+
+.o_main_navbar .o_menu_sections .active,
+.o_main_navbar .o_menu_sections .show,
+.o_main_navbar .o_menu_sections .dropdown-toggle.show {
+    background-color: var(--ctm-primary) !important;
+    color: var(--ctm-navbar-text) !important;
+}
+
+
+/* Hover */
+
+.o_main_navbar .o_menu_sections > *:hover {
+    background-color: var(--ctm-primary) !important;
+    color: var(--ctm-navbar-text) !important;
+}
+
+
+/* Text inside menu */
+
+.o_main_navbar .o_menu_sections > * * {
+    color: var(--ctm-navbar-text) !important;
+}
+
+/* Menu container */
+.o_main_navbar .o_menu_sections {
+    background-color: transparent !important;
+}
+
+
+/* Every menu item */
+.o_main_navbar .o_menu_sections .o_nav_entry {
+    background-color: transparent !important;
+    color: var(--ctm-navbar-text) !important;
+}
+
+
+/* Text inside menu item */
+.o_main_navbar .o_menu_sections .o_nav_entry * {
+    color: var(--ctm-navbar-text) !important;
+}
+
+
+/* Hover */
+.o_main_navbar .o_menu_sections .o_nav_entry:hover {
+    background-color: var(--ctm-navbar-hover) !important;
+    color: var(--ctm-navbar-text) !important;
+}
+
+
+/* Active menu */
+.o_main_navbar .o_menu_sections .o_nav_entry.active {
+    background-color: var(--ctm-navbar-active) !important;
+    color: var(--ctm-navbar-text) !important;
+}
+
+
+/* Active menu children */
+.o_main_navbar .o_menu_sections .o_nav_entry.active * {
+    color: var(--ctm-navbar-text) !important;
+}

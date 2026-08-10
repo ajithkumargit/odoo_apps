@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<odoo>
+
+    <record id="theme_corporate_blue" model="company.theme">
+
+        <field name="name">Corporate Blue</field>
+
+        <field name="company_id"
+               ref="base.main_company"/>
+
+        <field name="primary_color">#1976D2</field>
+
+        <field name="secondary_color">#FFFFFF</field>
+
+        <field name="accent_color">#00A8E8</field>
+
+        <field name="success_color">#2E7D32</field>
+
+        <field name="warning_color">#ED6C02</field>
+
+        <field name="danger_color">#D32F2F</field>
+
+        <field name="info_color">#0288D1</field>
+
+        <field name="background_color">#F5F7FA</field>
+
+        <field name="text_color">#212121</field>
+
+        <field name="navbar_color">#1976D2</field>
+
+        <field name="navbar_text_color">#FFFFFF</field>
+
+        <field name="sidebar_color">#FFFFFF</field>
+
+        <field name="sidebar_text_color">#212121</field>
+
+        <field name="card_color">#FFFFFF</field>
+
+        <field name="card_border_color">#E0E0E0</field>
+
+        <field name="font_family">Inter</field>
+
+        <field name="font_size">14</field>
+
+        <field name="button_radius">6</field>
+
+        <field name="input_radius">5</field>
+
+        <field name="card_radius">8</field>
+
+        <field name="badge_radius">20</field>
+
+    </record>
+
+    <record id="theme_corporate_green" model="company.theme">
+
+        <field name="name">Corporate Green</field>
+
+        <field name="company_id"
+               ref="base.main_company"/>
+
+        <field name="primary_color">#198754</field>
+
+        <field name="secondary_color">#FFFFFF</field>
+
+        <field name="accent_color">#20C997</field>
+
+        <field name="background_color">#F4F8F5</field>
+
+        <field name="text_color">#212529</field>
+
+        <field name="navbar_color">#198754</field>
+
+        <field name="navbar_text_color">#FFFFFF</field>
+
+        <field name="sidebar_color">#FFFFFF</field>
+
+        <field name="sidebar_text_color">#212529</field>
+
+        <field name="card_color">#FFFFFF</field>
+
+        <field name="card_border_color">#DEE2E6</field>
+
+        <field name="font_family">Roboto</field>
+
+        <field name="font_size">14</field>
+
+        <field name="button_radius">6</field>
+
+        <field name="input_radius">5</field>
+
+        <field name="card_radius">8</field>
+
+        <field name="badge_radius">20</field>
+
+    </record>
+
+</odoo>

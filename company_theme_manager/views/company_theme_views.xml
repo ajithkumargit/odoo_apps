@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<odoo>
+
+    <record id="view_company_theme_list" model="ir.ui.view">
+        <field name="name">company.theme.list</field>
+        <field name="model">company.theme</field>
+        <field name="arch" type="xml">
+
+            <list string="Themes">
+
+                <field name="sequence" widget="handle"/>
+
+                <field name="name"/>
+
+                <field name="company_id"/>
+
+                <field name="primary_color"
+                       widget="color"/>
+
+                <field name="accent_color"
+                       widget="color"/>
+
+                <field name="font_family"/>
+
+                <field name="active"
+                       widget="boolean_toggle"/>
+
+            </list>
+
+        </field>
+    </record>
+
+
+
+    <record id="view_company_theme_form" model="ir.ui.view">
+    <field name="name">company.theme.form</field>
+    <field name="model">company.theme</field>
+
+    <field name="arch" type="xml">
+        <form string="Theme">
+
+            <sheet>
+
+                <!-- ================================================= -->
+                <!-- HEADER -->
+                <!-- ================================================= -->
+
+                <div class="oe_title">
+                    <label for="name"/>
+                    <h1>
+                        <field name="name"/>
+                    </h1>
+                </div>
+
+                <group>
+                    <group>
+                        <field name="company_id"/>
+                    </group>
+
+                    <group>
+                        <field name="active"/>
+                        <field name="sequence"/>
+                    </group>
+                </group>
+
+
+                <!-- ================================================= -->
+                <!-- GENERAL COLORS -->
+                <!-- ================================================= -->
+
+                <separator string="General Colors"/>
+
+                <group>
+                    <group>
+                        <field name="primary_color" widget="color"/>
+                        <field name="secondary_color" widget="color"/>
+                        <field name="accent_color" widget="color"/>
+                    </group>
+
+                    <group>
+                        <field name="success_color" widget="color"/>
+                        <field name="warning_color" widget="color"/>
+                        <field name="danger_color" widget="color"/>
+                        <field name="info_color" widget="color"/>
+                    </group>
+                </group>
+
+
+                <!-- ================================================= -->
+                <!-- NAVBAR -->
+                <!-- ================================================= -->
+
+                <separator string="Navbar"/>
+
+                <group>
+                    <group>
+                        <field name="navbar_color" widget="color"/>
+                    </group>
+
+                    <group>
+                        <field name="navbar_text_color" widget="color"/>
+                    </group>
+                </group>
+
+
+                <!-- ================================================= -->
+                <!-- APPS MENU -->
+                <!-- ================================================= -->
+
+                <separator string="Apps Menu"/>
+
+                <group>
+                    <group>
+                        <field name="apps_menu_color" widget="color"/>
+                        <field name="apps_menu_text_color" widget="color"/>
+                    </group>
+
+                    <group>
+                        <field name="apps_menu_hover_color" widget="color"/>
+                        <field name="apps_menu_icon_color" widget="color"/>
+                    </group>
+                </group>
+
+
+                <!-- ================================================= -->
+                <!-- PAGE / CONTENT -->
+                <!-- ================================================= -->
+
+                <separator string="Page &amp; Content"/>
+
+                <group>
+                    <group>
+                        <field name="page_background_color"
+                               widget="color"/>
+
+                        <field name="content_background_color"
+                               widget="color"/>
+                    </group>
+
+                    <group>
+                        <field name="background_color"
+                               widget="color"/>
+
+                        <field name="text_color"
+                               widget="color"/>
+                    </group>
+                </group>
+
+
+                <!-- ================================================= -->
+                <!-- SIDEBAR -->
+                <!-- ================================================= -->
+
+                <separator string="Sidebar"/>
+
+                <group>
+                    <group>
+                        <field name="sidebar_color"
+                               widget="color"/>
+
+                        <field name="sidebar_text_color"
+                               widget="color"/>
+                    </group>
+
+                    <group>
+                        <field name="sidebar_hover_color"
+                               widget="color"/>
+
+                        <field name="sidebar_active_color"
+                               widget="color"/>
+                    </group>
+                </group>
+
+
+                <!-- ================================================= -->
+                <!-- DROPDOWN -->
+                <!-- ================================================= -->
+
+                <separator string="Dropdowns"/>
+
+                <group>
+                    <group>
+                        <field name="dropdown_color"
+                               widget="color"/>
+
+                        <field name="dropdown_text_color"
+                               widget="color"/>
+                    </group>
+
+                    <group>
+                        <field name="dropdown_hover_color"
+                               widget="color"/>
+                    </group>
+                </group>
+
+
+                <!-- ================================================= -->
+                <!-- CARDS -->
+                <!-- ================================================= -->
+
+                <separator string="Cards"/>
+
+                <group>
+                    <group>
+                        <field name="card_color"
+                               widget="color"/>
+
+                        <field name="card_border_color"
+                               widget="color"/>
+                    </group>
+
+                    <group>
+                        <field name="card_shadow"/>
+                    </group>
+                </group>
+
+
+                <!-- ================================================= -->
+                <!-- TYPOGRAPHY -->
+                <!-- ================================================= -->
+
+                <separator string="Typography"/>
+
+                <group>
+                    <group>
+                        <field name="font_family"/>
+                        <field name="font_size"/>
+                    </group>
+
+                    <group>
+                        <field name="heading_font_weight"/>
+                    </group>
+                </group>
+
+
+                <!-- ================================================= -->
+                <!-- COMPONENTS -->
+                <!-- ================================================= -->
+
+                <separator string="Components"/>
+
+                <group>
+                    <group>
+                        <field name="button_radius"/>
+                        <field name="input_radius"/>
+                    </group>
+
+                    <group>
+                        <field name="card_radius"/>
+                        <field name="badge_radius"/>
+                    </group>
+                </group>
+
+
+                <!-- ================================================= -->
+                <!-- BUTTONS -->
+                <!-- ================================================= -->
+
+                <separator string="Buttons"/>
+
+                <group>
+                    <group>
+                        <field name="button_primary_text_color"
+                               widget="color"/>
+
+                    </group>
+
+                    <group>
+                        <field name="button_secondary_color"
+                               widget="color"/>
+
+                    </group>
+                </group>
+
+            </sheet>
+
+        </form>
+    </field>
+</record>
+
+
+    <record id="view_company_theme_search" model="ir.ui.view">
+        <field name="name">company.theme.search</field>
+        <field name="model">company.theme</field>
+        <field name="arch" type="xml">
+
+            <search>
+
+                <field name="name"/>
+
+                <field name="company_id"/>
+
+                <filter
+                    string="Active"
+                    name="active"
+                    domain="[('active', '=', True)]"/>
+
+                <filter
+                    string="Archived"
+                    name="archived"
+                    domain="[('active', '=', False)]"/>
+
+                <group>
+                    <filter
+                        string="Company"
+                        name="group_company"
+                        context="{'group_by': 'company_id'}"/>
+                </group>
+
+            </search>
+
+        </field>
+    </record>
+
+
+    <record id="action_company_theme" model="ir.actions.act_window">
+
+        <field name="name">Themes</field>
+
+        <field name="res_model">company.theme</field>
+
+        <field name="view_mode">list,form</field>
+
+        <field name="search_view_id"
+               ref="view_company_theme_search"/>
+
+    </record>
+
+    <menuitem
+        id="menu_company_theme_root"
+        name="Theme Manager"
+        sequence="10"
+        groups="base.group_system"/>
+
+    <menuitem
+        id="menu_company_theme"
+        name="Themes"
+        parent="menu_company_theme_root"
+        action="action_company_theme"
+        sequence="10"
+        groups="base.group_system"/>
+
+</odoo>
