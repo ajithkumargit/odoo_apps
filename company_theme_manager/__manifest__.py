@@ -23,6 +23,10 @@
             "company_theme_manager/static/src/js/theme_manager.js",
         ],
     },
+    "images": [
+        "images/image.png",
+        "images/main_1.png"
+    ],
     "installable": True,
     "application": True,
 }
