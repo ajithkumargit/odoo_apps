@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="finance_category_balance_list" model="ir.ui.view">
+        <field name="name">finance.transaction.category.balance.list</field>
+        <field name="model">finance.transaction</field>
+        <field name="arch" type="xml">
+            <list string="Category Balance" default_order="transaction_datetime desc,id desc"
+                  decoration-success="signed_amount &gt; 0" decoration-danger="signed_amount &lt; 0"
+                  decoration-warning="not balance_type_known" expand="1" import="false">
+                <field name="transaction_datetime"/>
+                <field name="description"/>
+                <field name="category_id"/>
+                <field name="subcategory_id" optional="show"/>
+                <field name="classification_id" optional="show"/>
+                <field name="type_id"/>
+                <field name="income_amount" sum="Total received"/>
+                <field name="expense_amount" sum="Total paid"/>
+                <field name="signed_amount" sum="Net balance"/>
+                <field name="balance_currency_id" optional="hide"/>
+                <field name="account_id" optional="hide"/>
+                <field name="status" optional="show"/>
+                <field name="balance_type_known" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="finance_category_balance_form" model="ir.ui.view">
+        <field name="name">finance.transaction.category.balance.form</field>
+        <field name="model">finance.transaction</field>
+        <field name="arch" type="xml">
+            <form string="Finance Transaction">
+                <sheet>
+                    <field name="balance_type_known" invisible="1"/>
+                    <div class="alert alert-warning" role="alert" invisible="balance_type_known">
+                        Select an income or expense type to include this transaction in the balance.
+                    </div>
+                    <group>
+                        <group>
+                            <field name="description"/>
+                            <field name="transaction_datetime"/>
+                            <field name="type_id"/>
+                            <field name="amount"/>
+                            <field name="account_id"/>
+                            <field name="status"/>
+                        </group>
+                        <group>
+                            <field name="category_id"/>
+                            <field name="subcategory_id"/>
+                <field name="classification_id"/>
+                            <field name="classification_override_id" invisible="1"/>
+                            <button name="action_use_category_classification" type="object" string="Use Category Classification" class="btn-link" invisible="not classification_override_id"/>
+                            <field name="balance_currency_id" readonly="1"/>
+                            <field name="income_amount"/>
+                            <field name="expense_amount"/>
+                            <field name="signed_amount"/>
+                        </group>
+                    </group>
+                    <group string="Transaction Details">
+                        <field name="name"/>
+                        <field name="created_from" readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="finance_category_balance_calendar" model="ir.ui.view">
+        <field name="name">finance.transaction.category.balance.calendar</field>
+        <field name="model">finance.transaction</field>
+        <field name="arch" type="xml">
+            <calendar string="Category Balance" date_start="transaction_datetime"
+                      color="category_id" mode="month" quick_create="false" event_open_popup="true">
+                <field name="category_id" filters="1"/>
+                <field name="classification_id"/>
+                <field name="description"/>
+                <field name="type_id"/>
+                <field name="signed_amount"/>
+                <field name="balance_currency_id" invisible="1"/>
+            </calendar>
+        </field>
+    </record>
+
+    <record id="finance_category_balance_search" model="ir.ui.view">
+        <field name="name">finance.transaction.category.balance.search</field>
+        <field name="model">finance.transaction</field>
+        <field name="arch" type="xml">
+            <search string="Category Balance">
+                <field name="description"/>
+                <field name="category_id"/>
+                <field name="subcategory_id"/>
+                <field name="classification_id"/>
+                <field name="account_id"/>
+                <field name="balance_currency_id"/>
+                <field name="transaction_datetime"/>
+                <filter name="transaction_date" string="Transaction Date" date="transaction_datetime"/>
+                <separator/>
+                <filter name="approved" string="Approved" domain="[('status_code', '=', 'approved')]"/>
+                <filter name="inreview" string="In Review" domain="[('status_code', '=', 'inreview')]"/>
+                <separator/>
+                <filter name="income" string="Income" domain="[('income_amount', '!=', 0)]"/>
+                <filter name="expense" string="Expense" domain="[('expense_amount', '!=', 0)]"/>
+                <filter name="unknown_type" string="Missing Income/Expense Type" domain="[('balance_type_known', '=', False)]"/>
+                <separator/>
+                <filter name="group_currency" string="Currency" context="{'group_by': 'balance_currency_id'}"/>
+                <filter name="group_classification" string="Classification" context="{'group_by': 'classification_id'}"/>
+                <filter name="group_category" string="Category" context="{'group_by': 'category_id'}"/>
+                <filter name="group_subcategory" string="Sub Category" context="{'group_by': 'subcategory_id'}"/>
+                <filter name="group_month" string="Month" context="{'group_by': 'transaction_datetime:month'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="finance_category_balance_window_action" model="ir.actions.act_window">
+        <field name="name">Category Balance</field>
+        <field name="res_model">finance.transaction</field>
+        <field name="view_mode">list,calendar,form,graph</field>
+        <field name="search_view_id" ref="finance_category_balance_search"/>
+        <field name="context">{'search_default_group_currency': 1, 'search_default_group_category': 2}</field>
+        <field name="help" type="html">
+            <p>Group by category to tally money received and paid. Use Transaction Date or a custom date-range filter to limit the period.</p>
+        </field>
+    </record>
+    <record id="finance_category_balance_window_list" model="ir.actions.act_window.view">
+        <field name="sequence">1</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="finance_category_balance_list"/>
+        <field name="act_window_id" ref="finance_category_balance_window_action"/>
+    </record>
+    <record id="finance_category_balance_window_calendar" model="ir.actions.act_window.view">
+        <field name="sequence">2</field>
+        <field name="view_mode">calendar</field>
+        <field name="view_id" ref="finance_category_balance_calendar"/>
+        <field name="act_window_id" ref="finance_category_balance_window_action"/>
+    </record>
+    <record id="finance_category_balance_window_form" model="ir.actions.act_window.view">
+        <field name="sequence">3</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="finance_category_balance_form"/>
+        <field name="act_window_id" ref="finance_category_balance_window_action"/>
+    </record>
+</odoo>

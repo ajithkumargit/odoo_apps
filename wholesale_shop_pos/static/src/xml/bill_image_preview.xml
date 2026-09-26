@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="wholesale_shop_pos.BillImagePreview">
+        <button t-if="pages.length" type="button" class="btn btn-secondary mb-2" t-on-click="open">
+            <i class="fa fa-picture-o me-1"/> View Bill Images
+        </button>
+        <t t-if="state.open and page" t-portal="'body'">
+            <section class="o_shop_bill_preview" role="dialog" aria-label="Bill image reference" aria-modal="false"
+                     t-att-style="'left:' + state.x + 'px;top:' + state.y + 'px;'"
+                     t-on-keydown="onKeydown" tabindex="-1">
+                <div class="o_shop_bill_preview_header" t-on-pointerdown="start" t-on-pointermove="move"
+                     t-on-pointerup="end" t-on-pointercancel="end" t-on-lostpointercapture="end">
+                    <strong><i class="fa fa-arrows me-2"/>Bill image</strong>
+                    <button type="button" class="btn btn-sm btn-light" title="Close image" aria-label="Close image"
+                            t-on-click="() => state.open = false"><i class="fa fa-times"/></button>
+                </div>
+                <div class="d-flex align-items-center gap-2 p-2 border-bottom">
+                    <select class="form-select form-select-sm" aria-label="Bill page" t-on-change="select">
+                        <option t-foreach="pages" t-as="item" t-key="item_index" t-att-value="item_index"
+                                t-att-selected="item_index === currentIndex"><t t-esc="item_index + 1"/>. <t t-esc="item.name"/></option>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-secondary" aria-label="Zoom out" t-on-click="() => this.zoom(-25)">−</button>
+                    <button type="button" class="btn btn-sm btn-secondary text-nowrap" title="Fit width" t-on-click="() => state.zoom = 100"><t t-esc="state.zoom"/>%</button>
+                    <button type="button" class="btn btn-sm btn-secondary" aria-label="Zoom in" t-on-click="() => this.zoom(25)">+</button>
+                </div>
+                <div class="o_shop_bill_preview_image">
+                    <img t-att-src="url" t-att-alt="page.name" t-att-style="'width:' + state.zoom + '%;'" draggable="false"/>
+                </div>
+                <div class="small text-muted px-2 py-1">Drag the title to move. Drag the bottom-right corner to resize.</div>
+            </section>
+        </t>
+    </t>
+</templates>

@@ -1,0 +1,5 @@
+# Free, local CPU OCR dependencies for supplier bill extraction.
+numpy==1.26.4
+opencv-python==4.11.0.86
+Pillow>=10.2.0
+PyMuPDF==1.28.2

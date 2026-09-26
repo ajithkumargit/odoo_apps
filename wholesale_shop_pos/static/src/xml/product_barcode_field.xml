@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="wholesale_shop_pos.ProductBarcodeField">
+        <div class="d-flex align-items-center gap-2">
+            <t t-call="web.CharField"/>
+            <button t-if="!props.readonly" type="button" class="btn btn-secondary text-nowrap"
+                    title="Scan barcode into this field" t-on-click="scan">
+                <i class="fa fa-barcode me-1"/>Scan Barcode
+            </button>
+        </div>
+    </t>
+    <t t-name="wholesale_shop_pos.ProductBarcodeDialog">
+        <Dialog title="'Scan Product Barcode'" size="'md'">
+            <BarcodeVideoScanner t-if="state.live" facingMode="'environment'"
+                                 onResult.bind="onResult" onError.bind="onError"/>
+            <p t-else="">Take a photo or choose an image of the product barcode.</p>
+            <div t-if="state.error" class="alert alert-warning" role="alert" t-esc="state.error"/>
+            <input type="file" accept="image/*" capture="environment" class="d-none"
+                   t-ref="photo" t-on-change="scanPhoto"/>
+            <t t-set-slot="footer">
+                <button type="button" class="btn btn-primary" t-att-disabled="state.busy"
+                        t-on-click="() => this.photo.el.click()">
+                    <t t-if="state.busy">Reading barcode...</t>
+                    <t t-else="">Take Photo / Choose Image</t>
+                </button>
+                <button type="button" class="btn btn-secondary" t-on-click="props.close">Cancel</button>
+            </t>
+        </Dialog>
+    </t>
+</templates>

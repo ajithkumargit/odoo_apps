@@ -1,0 +1,9 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_import_transactions,import.transactions,model_import_transactions,,1,1,1,1
+access_finance_category,finance.category,model_finance_category,,1,1,1,1
+access_finance_account,finance.account,model_finance_account,,1,1,1,1
+access_selection_model,selection.model,model_selection_model,,1,1,1,1
+access_finance_transaction,finance.transaction,model_finance_transaction,,1,1,1,1
+access_finance_match_text,finance.match.text,model_finance_match_text,,1,1,1,1
+access_import_wizard,import.wizard,model_import_wizard,,1,1,1,1
+access_finance_classification,finance.classification,model_finance_classification,base.group_user,1,1,1,1

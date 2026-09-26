@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_wholesale_shop_root" name="Wholesale Shop" sequence="10"/>
+
+    <record id="menu_wholesale_shop_purchase" model="ir.ui.menu">
+        <field name="name">Purchases</field>
+        <field name="parent_id" ref="menu_wholesale_shop_root"/>
+        <field name="active" eval="False"/>
+    </record>
+    <menuitem id="menu_shop_purchase_import" name="Bill Imports" parent="menu_wholesale_shop_root" action="action_shop_purchase_import" sequence="10"/>
+    <menuitem id="menu_shop_purchase_import_completed" name="PO Created Bills" parent="menu_wholesale_shop_root" action="action_shop_purchase_import_completed" sequence="15"/>
+    <menuitem id="menu_shop_vendor_product_map" name="Vendor Product Mappings" parent="menu_wholesale_shop_root" action="action_shop_vendor_product_map" sequence="20"/>
+    <menuitem id="menu_shop_bill_product_name_map" name="Bill Name → Product" parent="menu_wholesale_shop_root" action="action_shop_bill_product_name_map" sequence="22"/>
+    <menuitem id="menu_shop_bill_ocr_template" name="Vendor OCR Templates" parent="menu_wholesale_shop_root" action="action_shop_bill_ocr_template" sequence="24"/>
+    <menuitem id="menu_shop_new_product_review" name="New Product Review" parent="menu_wholesale_shop_root" action="action_shop_new_product_review" sequence="25"/>
+    <menuitem id="menu_shop_price_history" name="Price History" parent="menu_wholesale_shop_root" action="action_shop_product_price_history" sequence="30"/>
+</odoo>

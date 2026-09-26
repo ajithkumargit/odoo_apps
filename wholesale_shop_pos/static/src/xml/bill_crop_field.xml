@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="wholesale_shop_pos.BillCropField">
+        <div class="o_bill_crop_field">
+            <div class="o_bill_crop_canvas"
+                 t-on-pointerdown="start" t-on-pointermove="move"
+                 t-on-pointerup="end" t-on-pointercancel="end">
+                <img t-ref="image" t-att-src="url" draggable="false" alt="Bill crop preview"/>
+                <div class="o_bill_crop_selection" t-att-style="selectionStyle"/>
+            </div>
+        </div>
+    </t>
+</templates>

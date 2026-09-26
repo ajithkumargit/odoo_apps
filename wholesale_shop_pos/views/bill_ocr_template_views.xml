@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_shop_bill_ocr_template_list" model="ir.ui.view">
+        <field name="name">shop.bill.ocr.template.list</field>
+        <field name="model">shop.bill.ocr.template</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="partner_id"/>
+                <field name="name"/>
+                <field name="template_code"/>
+                <field name="data_rows_per_item"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shop_bill_ocr_template_form" model="ir.ui.view">
+        <field name="name">shop.bill.ocr.template.form</field>
+        <field name="model">shop.bill.ocr.template</field>
+        <field name="arch" type="xml">
+            <form string="Vendor OCR Template">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="template_code"/>
+                            <field name="data_rows_per_item"/>
+                            <field name="partner_id"
+                                   context="{'default_shop_is_vendor': True, 'show_vat': True}"/>
+                        </group>
+                        <group>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="active"/>
+                            <field name="config_key" readonly="1"/>
+                        </group>
+                    </group>
+                    <separator string="Printed Header Aliases"/>
+                    <div class="text-muted mb-2">
+                        Add only headings that differ from standard bill headings. Changes apply to the next extraction without changing Python code.
+                    </div>
+                    <field name="alias_ids">
+                        <list editable="bottom">
+                            <field name="role"/>
+                            <field name="printed_label"/>
+                            <field name="active" widget="boolean_toggle" optional="hide"/>
+                        </list>
+                    </field>
+                    <group>
+                        <field name="notes" placeholder="Optional layout or photo notes for this vendor..."/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_shop_bill_ocr_template" model="ir.actions.act_window">
+        <field name="name">Vendor OCR Templates</field>
+        <field name="res_model">shop.bill.ocr.template</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p>Create a template for a vendor and map an unusual printed column heading to its meaning.</p>
+        </field>
+    </record>
+</odoo>

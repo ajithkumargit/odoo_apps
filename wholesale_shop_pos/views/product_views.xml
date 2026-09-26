@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_product_template_form_profit_wholesale_shop" model="ir.ui.view">
+        <field name="name">product.template.form.profit.wholesale.shop</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='barcode']" position="attributes">
+                <attribute name="widget">shop_barcode_scan</attribute>
+            </xpath>
+            <xpath expr="//div[@name='standard_price_uom']" position="after">
+                <field name="shop_profit_percent" invisible="product_variant_count &gt; 1"/>
+                <field name="shop_price_check" invisible="product_variant_count &gt; 1"/>
+                <label for="shop_price_check_profit_percent"
+                       invisible="product_variant_count &gt; 1"/>
+                <div class="o_row" invisible="product_variant_count &gt; 1">
+                    <field name="shop_price_check_profit_percent"
+                           readonly="1" class="oe_inline"/>
+                    <button name="action_apply_shop_checked_profit" type="object"
+                            string="Apply" icon="fa-check" class="btn-secondary btn-sm oe_inline"
+                            title="Set this as the actual Profit %"
+                            invisible="not shop_price_check"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_product_product_form_wholesale_shop" model="ir.ui.view">
+        <field name="name">product.product.form.wholesale.shop</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="product.product_normal_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='barcode']" position="attributes">
+                <attribute name="widget">shop_barcode_scan</attribute>
+            </xpath>
+            <xpath expr="//group" position="inside">
+                <group string="Wholesale Shop">
+                    <field name="shop_hsn_code"/>
+                    <field name="shop_variant_profit_percent"/>
+                    <field name="shop_variant_sale_price" readonly="1"/>
+                    <field name="shop_variant_price_check"/>
+                    <label for="shop_variant_price_check_profit_percent"/>
+                    <div class="o_row">
+                        <field name="shop_variant_price_check_profit_percent"
+                               readonly="1" class="oe_inline"/>
+                        <button name="action_apply_shop_variant_checked_profit" type="object"
+                                string="Apply" icon="fa-check" class="btn-secondary btn-sm oe_inline"
+                                title="Set this as the actual Variant Profit %"
+                                invisible="not shop_variant_price_check"/>
+                    </div>
+                    <field name="shop_box_barcode" widget="shop_barcode_scan"/>
+                    <field name="shop_box_qty"/>
+                    <field name="shop_low_stock_qty"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

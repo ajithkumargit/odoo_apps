@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_partner_form_wholesale_shop_roles" model="ir.ui.view">
+        <field name="name">res.partner.form.wholesale.shop.roles</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <group name="sale" position="inside">
+                <field name="shop_is_customer"/>
+            </group>
+            <group name="purchase" position="inside">
+                <field name="shop_is_vendor"/>
+            </group>
+        </field>
+    </record>
+
+    <record id="view_partner_search_wholesale_shop_roles" model="ir.ui.view">
+        <field name="name">res.partner.search.wholesale.shop.roles</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="account.res_partner_view_search"/>
+        <field name="arch" type="xml">
+            <filter name="customer" position="attributes">
+                <attribute name="domain">[('shop_is_customer', '=', True)]</attribute>
+            </filter>
+            <filter name="supplier" position="attributes">
+                <attribute name="domain">[('shop_is_vendor', '=', True)]</attribute>
+            </filter>
+        </field>
+    </record>
+
+    <record id="account.res_partner_action_customer" model="ir.actions.act_window">
+        <field name="context">{'search_default_customer': 1, 'default_is_company': True, 'default_shop_is_customer': True}</field>
+    </record>
+
+    <record id="account.res_partner_action_supplier" model="ir.actions.act_window">
+        <field name="context">{'search_default_supplier': 1, 'default_is_company': True, 'default_shop_is_vendor': True}</field>
+    </record>
+</odoo>

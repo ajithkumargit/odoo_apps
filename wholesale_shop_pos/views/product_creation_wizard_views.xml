@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_shop_purchase_import_create_product_wizard_form" model="ir.ui.view">
+        <field name="name">shop.purchase.import.create.product.wizard.form</field>
+        <field name="model">shop.purchase.import.create.product.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Create Product or Variant">
+                <group>
+                    <field name="line_id"/>
+                    <field name="vendor_id" context="{'default_shop_is_vendor': True}"/>
+                    <field name="company_id" invisible="1"/>
+                    <field name="company_currency_id" invisible="1"/>
+                    <field name="creation_mode" widget="radio"/>
+                </group>
+                <group>
+                    <group string="Product">
+                        <field name="product_name" invisible="creation_mode == 'existing_variant'"/>
+                        <field name="product_tmpl_id"
+                               invisible="creation_mode != 'existing_variant'"
+                               required="creation_mode == 'existing_variant'"/>
+                        <field name="variant_spec"
+                               invisible="creation_mode == 'product'"
+                               required="creation_mode != 'product'"
+                               placeholder="Size: 200G; Pack: 10"/>
+                        <field name="categ_id" invisible="creation_mode == 'existing_variant'"/>
+                        <field name="uom_id" invisible="creation_mode == 'existing_variant'"/>
+                        <field name="is_storable" invisible="creation_mode == 'existing_variant'"/>
+                        <field name="sale_ok" invisible="creation_mode == 'existing_variant'"/>
+                    </group>
+                    <group string="Variant / Purchasing">
+                        <field name="default_code"/>
+                        <field name="barcode"/>
+                        <field name="hsn_code"/>
+                        <field name="standard_price"/>
+                        <field name="box_quantity"/>
+                    </group>
+                </group>
+                <div class="alert alert-info" role="alert" invisible="creation_mode == 'product'">
+                    Use <strong>Attribute: Value</strong> pairs. For example,
+                    <strong>Size: 200G; Pack: 10</strong> creates a true Odoo variant combination.
+                </div>
+                <footer>
+                    <button name="action_create_product" string="Create and Match" type="object" class="btn-primary"/>
+                    <button string="Cancel" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,20 @@
+<odoo>
+    <menuitem id="finance_category_balance_menu" name="Category Balance"
+              parent="menu_finance_transactions" action="finance_category_balance_window_action" sequence="2"/>
+
+    <record id="finance_dashboard_client_action"
+            model="ir.actions.client">
+
+        <field name="name">Finance Dashboard</field>
+        <field name="tag">finance_dashboard</field>
+
+    </record>
+
+    <menuitem
+        id="finance_dashboard_menu"
+        name="Dashboard"
+        parent="menu_finance_transactions"
+        action="finance_dashboard_client_action"
+        sequence="1"/>
+
+</odoo>

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_shop_product_price_history_list" model="ir.ui.view">
+        <field name="name">shop.product.price.history.list</field>
+        <field name="model">shop.product.price.history</field>
+        <field name="arch" type="xml">
+            <list create="false" edit="false" delete="false">
+                <field name="changed_at"/>
+                <field name="price_type"/>
+                <field name="purchase_date" optional="hide"/>
+                <field name="product_id"/>
+                <field name="partner_id" optional="hide"/>
+                <field name="qty" optional="hide"/>
+                <field name="previous_price"/>
+                <field name="unit_price"/>
+                <field name="currency_id"/>
+                <field name="changed_by_id"/>
+                <field name="source_description"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="purchase_import_id"/>
+                <field name="purchase_order_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shop_product_price_history_form" model="ir.ui.view">
+        <field name="name">shop.product.price.history.form</field>
+        <field name="model">shop.product.price.history</field>
+        <field name="arch" type="xml">
+            <form create="false" edit="false" delete="false">
+                <sheet><group>
+                    <field name="product_id"/><field name="price_type"/>
+                    <field name="previous_price"/><field name="unit_price"/>
+                    <field name="currency_id"/><field name="changed_at"/>
+                    <field name="changed_by_id"/><field name="source_description"/>
+                    <field name="company_id" groups="base.group_multi_company"/>
+                    <field name="partner_id"/><field name="purchase_date"/>
+                    <field name="qty"/><field name="purchase_import_id"/><field name="purchase_order_id"/>
+                </group></sheet>
+            </form>
+        </field>
+    </record>
+    <record id="view_shop_product_price_history_search" model="ir.ui.view">
+        <field name="name">shop.product.price.history.search</field>
+        <field name="model">shop.product.price.history</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="product_id"/><field name="changed_by_id"/><field name="source_description"/>
+                <filter name="cost" string="Cost Changes" domain="[('price_type', '=', 'cost')]"/>
+                <filter name="sale" string="Sales Price Changes" domain="[('price_type', '=', 'sale')]"/>
+                <filter name="purchase" string="Purchases" domain="[('price_type', '=', 'purchase')]"/>
+                <separator/>
+                <filter name="date" string="Changed On" date="changed_at"/>
+                <separator/>
+                <filter name="group_product" string="Product" context="{'group_by': 'product_id'}"/>
+                <filter name="group_type" string="Price Type" context="{'group_by': 'price_type'}"/>
+            </search>
+        </field>
+    </record>
+    <record id="action_shop_product_price_history" model="ir.actions.act_window">
+        <field name="name">Price History</field>
+        <field name="res_model">shop.product.price.history</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

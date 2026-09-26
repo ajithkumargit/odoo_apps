@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_shop_purchase_import_list" model="ir.ui.view">
+        <field name="name">shop.purchase.import.list</field>
+        <field name="model">shop.purchase.import</field>
+        <field name="arch" type="xml">
+            <list decoration-warning="state == 'review'" decoration-success="state == 'po_created'" decoration-danger="state == 'cancelled'">
+                <field name="name"/>
+                <field name="bill_date"/>
+                <field name="vendor_id"/>
+                <field name="bill_number"/>
+                <field name="matched_line_count"/>
+                <field name="unmatched_line_count"/>
+                <field name="total_amount" sum="Total"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_shop_purchase_import_form" model="ir.ui.view">
+        <field name="name">shop.purchase.import.form</field>
+        <field name="model">shop.purchase.import</field>
+        <field name="arch" type="xml">
+            <form string="Purchase Bill Import">
+                <header>
+                    <button name="action_extract_bill" string="Extract Bill" type="object" class="btn-primary"
+                            title="Read the uploaded bill, reconstruct its lines, and automatically match known products and taxes"
+                            invisible="state not in ('draft', 'review') or (not original_file and not page_ids)"/>
+                    <button name="action_create_missing_products" string="Create Missing Products" type="object" class="btn-secondary"
+                            title="Only needed for OCR lines that could not be matched safely; review their names before creating products"
+                            invisible="state not in ('draft', 'review') or unmatched_line_count == 0"/>
+                    <button name="action_create_reviewed_purchase_order"
+                            string="Create Reviewed PO" type="object" class="btn-primary"
+                            title="Recheck product and tax mappings, mark the bill ready, and create its purchase order"
+                            invisible="state not in ('draft', 'review', 'ready') or not line_ids or unmatched_line_count != 0"/>
+                    <button name="action_revert_purchase_workflow"
+                            string="Revert" type="object" class="btn-secondary"
+                            icon="fa-undo"
+                            title="Cancel the draft vendor bill, return received stock, cancel the purchase order, and reopen this import for review"
+                            confirm="This will cancel the draft vendor bill, create and validate stock returns, cancel the purchase order, and reopen the import. Continue?"
+                            invisible="state != 'po_created' or not purchase_order_id"/>
+                    <button name="action_reset_to_review" string="Reset to Review" type="object" invisible="state not in ('ready', 'po_created')"/>
+                    <button name="action_cancel" string="Cancel" type="object" invisible="state == 'cancelled'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,review,ready,po_created"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="vendor_id"
+                                   widget="res_partner_many2one"
+                                   context="{'default_shop_is_vendor': True, 'show_vat': True}"
+                                   placeholder="Name, TIN, Email, or Reference"
+                                   readonly="state in ('po_created', 'cancelled')"/>
+                            <field name="ocr_template_id"
+                                   options="{'no_create': True}"
+                                   readonly="state in ('po_created', 'cancelled')"/>
+                            <field name="bill_number" readonly="state in ('po_created', 'cancelled')"/>
+                            <field name="bill_date" readonly="state in ('po_created', 'cancelled')"/>
+                            <field name="currency_id" readonly="state in ('po_created', 'cancelled')"/>
+                        </group>
+                        <group>
+                            <field name="original_file" widget="bill_camera" string="First Page / PDF" filename="original_file_name"
+                                   options="{'accepted_file_extensions': 'image/*,.pdf'}"
+                                   readonly="state == 'cancelled'"/>
+                            <field name="original_file_name" invisible="1"/>
+                            <field name="write_date" invisible="1"/>
+                            <field name="original_is_image" invisible="1"/>
+                            <field name="purchase_order_id" readonly="1"/>
+                            <field name="matched_line_count" readonly="1"/>
+                            <field name="unmatched_line_count" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <widget name="bill_image_preview"/>
+                    <notebook>
+                        <page string="Bill Pages">
+                            <div class="alert alert-info" role="alert">
+                                Upload or photograph page 1 above, then add continuation images or PDFs here in their bill order.
+                                Use Take a photo on each continuation page to capture it with your camera.
+                                Each image can be cropped independently. All pages are combined and extracted as one bill.
+                            </div>
+                            <field name="page_ids" context="{'default_import_id': id}"
+                                   readonly="state in ('po_created', 'cancelled')">
+                                <list string="Continuation Pages">
+                                    <field name="is_image" column_invisible="True"/>
+                                    <field name="write_date" column_invisible="True"/>
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="page_file" filename="page_file_name"/>
+                                    <field name="page_file_name"/>
+                                    <field name="manual_crop_enabled"/>
+                                </list>
+                                <form string="Continuation Bill Page">
+                                    <sheet>
+                                        <group>
+                                            <field name="sequence"/>
+                                            <field name="page_file" widget="bill_camera" filename="page_file_name"
+                                                   options="{'accepted_file_extensions': 'image/*,.pdf'}"/>
+                                            <field name="page_file_name" invisible="1"/>
+                                            <field name="write_date" invisible="1"/>
+                                            <field name="is_image" invisible="1"/>
+                                            <field name="manual_crop_enabled" invisible="not is_image"/>
+                                            <button name="action_reset_manual_crop" string="Reset Crop"
+                                                    type="object" class="btn-secondary"
+                                                    invisible="not manual_crop_enabled"/>
+                                        </group>
+                                        <div class="text-muted mb-2" invisible="not manual_crop_enabled">
+                                            Drag across this page to select only the printed invoice area.
+                                        </div>
+                                        <field name="page_file" widget="bill_image_crop" nolabel="1"
+                                               invisible="not manual_crop_enabled"/>
+                                        <field name="crop_left" invisible="1"/>
+                                        <field name="crop_top" invisible="1"/>
+                                        <field name="crop_right" invisible="1"/>
+                                        <field name="crop_bottom" invisible="1"/>
+                                    </sheet>
+                                </form>
+                            </field>
+                        </page>
+                        <page string="Crop Bill" invisible="not original_is_image">
+                            <group>
+                                <field name="manual_crop_enabled"/>
+                                <button name="action_reset_manual_crop" string="Reset Crop" type="object"
+                                        class="btn-secondary" invisible="not manual_crop_enabled"/>
+                            </group>
+                            <div class="text-muted mb-2" invisible="not manual_crop_enabled">
+                                Drag across the bill to select only the printed invoice area. The original upload is preserved.
+                            </div>
+                            <field name="original_file" widget="bill_image_crop" nolabel="1"
+                                   invisible="not manual_crop_enabled"/>
+                            <field name="crop_left" invisible="1"/>
+                            <field name="crop_top" invisible="1"/>
+                            <field name="crop_right" invisible="1"/>
+                            <field name="crop_bottom" invisible="1"/>
+                        </page>
+                        <page string="Bill Lines">
+                            <field name="line_ids" readonly="state in ('po_created', 'cancelled')" context="{'default_import_id': id}">
+                                <list editable="bottom" class="o_shop_bill_lines_list">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="raw_description" width="200px"/>
+                                    <field name="vendor_product_code" optional="hide"/>
+                                    <field name="barcode" optional="hide"/>
+                                    <field name="product_id" width="200px"/>
+                                    <button name="action_open_create_product" type="object" icon="fa-plus-square"
+                                            title="Create Product / Variant"
+                                            class="btn-link p-0 o_shop_compact_line_button"
+                                            width="28px" invisible="product_id"/>
+                                    <field name="quantity"/>
+                                    <field name="free_quantity" optional="show"/>
+                                    <field name="uom_id" optional="hide"/>
+                                    <field name="purchase_rate"/>
+                                    <field name="discount_percent" optional="show"/>
+                                    <field name="gst_percent" optional="show"/>
+                                    <field name="tax_ids" widget="many2many_tags"/>
+                                    <field name="purchase_unit_price_incl_tax" readonly="1" optional="show"/>
+                                    <field name="units_per_purchase_qty" optional="show"/>
+                                    <field name="item_unit_cost_incl_tax" readonly="1" optional="show"/>
+                                    <field name="taxable_amount" readonly="1"/>
+                                    <field name="tax_amount" readonly="1" optional="hide"/>
+                                    <field name="total_amount" readonly="parent.state not in ('draft', 'review')"/>
+                                    <field name="extraction_confidence" optional="hide"/>
+                                </list>
+                                <form>
+                                    <group>
+                                        <field name="raw_description"/>
+                                        <field name="corrected_description"/>
+                                        <field name="vendor_product_code"/>
+                                        <field name="barcode"/>
+                                        <field name="product_id"/>
+                                        <button name="action_open_create_product" string="Create Product" type="object"
+                                                class="btn-secondary" invisible="product_id"/>
+                                        <field name="hsn_code"/>
+                                    </group>
+                                    <group>
+                                        <field name="quantity"/>
+                                        <field name="free_quantity"/>
+                                        <field name="uom_id"/>
+                                        <field name="purchase_rate"/>
+                                        <field name="discount_percent"/>
+                                        <field name="gst_percent"/>
+                                        <field name="tax_ids" widget="many2many_tags"/>
+                                        <field name="purchase_unit_price_incl_tax" readonly="1"/>
+                                        <field name="units_per_purchase_qty"/>
+                                        <field name="item_unit_cost_incl_tax" readonly="1"/>
+                                        <field name="total_amount" readonly="parent.state not in ('draft', 'review')"/>
+                                    </group>
+                                </form>
+                            </field>
+                            <group class="oe_subtotal_footer oe_right">
+                                <field name="untaxed_amount" readonly="1"/>
+                                <field name="tax_amount" readonly="1"/>
+                                <field name="total_amount" readonly="1"/>
+                            </group>
+                        </page>
+                        <page string="Extraction / Audit">
+                            <group>
+                                <field name="extraction_status" widget="badge"/>
+                                <field name="extracted_vendor_name"/>
+                                <field name="extraction_model"/>
+                                <field name="extracted_at"/>
+                                <field name="extraction_response_id" groups="base.group_system"/>
+                            </group>
+                            <field name="raw_extracted_text" readonly="1"
+                                   placeholder="Structured extraction data will be retained here for audit."/>
+                        </page>
+                        <page string="Notes">
+                            <field name="note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_shop_purchase_import_kanban" model="ir.ui.view">
+        <field name="name">shop.purchase.import.kanban</field>
+        <field name="model">shop.purchase.import</field>
+        <field name="arch" type="xml">
+            <kanban>
+                <field name="name"/>
+                <field name="vendor_id"/>
+                <field name="bill_date"/>
+                <field name="total_amount"/>
+                <field name="state"/>
+                <field name="unmatched_line_count"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="p-3">
+                            <div class="fw-bold fs-5"><field name="name"/></div>
+                            <div><field name="vendor_id"/></div>
+                            <div class="text-muted"><field name="bill_date"/></div>
+                            <div class="mt-2"><strong>Total:</strong> <field name="total_amount"/></div>
+                            <div><strong>Unmatched:</strong> <field name="unmatched_line_count"/></div>
+                            <div class="mt-2"><field name="state" widget="badge"/></div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="action_shop_purchase_import" model="ir.actions.act_window">
+        <field name="name">Purchase Bill Imports</field>
+        <field name="res_model">shop.purchase.import</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="domain">[('state', '!=', 'po_created')]</field>
+    </record>
+
+    <record id="action_shop_purchase_import_completed" model="ir.actions.act_window">
+        <field name="name">PO Created Bills</field>
+        <field name="res_model">shop.purchase.import</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="domain">[('state', '=', 'po_created')]</field>
+        <field name="context">{'create': False}</field>
+    </record>
+
+    <record id="view_shop_purchase_import_line_product_review_list" model="ir.ui.view">
+        <field name="name">shop.purchase.import.line.product.review.list</field>
+        <field name="model">shop.purchase.import.line</field>
+        <field name="arch" type="xml">
+            <list string="New Product Review" editable="top" create="0" delete="0"
+                  class="o_shop_bill_lines_list">
+                <field name="import_id"/>
+                <field name="vendor_id"/>
+                <field name="raw_description" readonly="1"/>
+                <field name="corrected_description" string="POS Product Name"/>
+                <field name="vendor_product_code" optional="show"/>
+                <field name="barcode" optional="show"/>
+                <field name="hsn_code" optional="show"/>
+                <field name="quantity" readonly="1"/>
+                <field name="purchase_rate" readonly="1"/>
+                <field name="discount_percent" readonly="1"/>
+                <field name="gst_percent" readonly="1"/>
+                <field name="tax_ids" widget="many2many_tags"/>
+                <field name="purchase_unit_price_incl_tax" readonly="1"/>
+                <field name="units_per_purchase_qty"/>
+                <field name="item_unit_cost_incl_tax" readonly="1"/>
+                <field name="total_amount"/>
+                <field name="product_id"/>
+                <button name="action_open_create_product" type="object" icon="fa-plus-square"
+                        title="Create Product / Variant"
+                        class="btn-link p-0 o_shop_compact_line_button"
+                        width="28px" invisible="product_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_shop_new_product_review" model="ir.actions.act_window">
+        <field name="name">New Product Review</field>
+        <field name="res_model">shop.purchase.import.line</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_shop_purchase_import_line_product_review_list"/>
+        <field name="domain">[('product_id', '=', False), ('import_id.state', 'in', ('draft', 'review'))]</field>
+        <field name="context">{'search_default_group_by_vendor': 1}</field>
+        <field name="help" type="html">
+            <p>Review the supplier description, enter a simple POS product name, then create a standalone product or a true Odoo variant.</p>
+        </field>
+    </record>
+
+    <record id="view_shop_purchase_import_line_product_review_search" model="ir.ui.view">
+        <field name="name">shop.purchase.import.line.product.review.search</field>
+        <field name="model">shop.purchase.import.line</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="raw_description"/>
+                <field name="corrected_description"/>
+                <field name="vendor_id"/>
+                <field name="barcode"/>
+                <filter name="group_by_vendor" string="Vendor" context="{'group_by': 'vendor_id'}"/>
+                <filter name="group_by_import" string="Bill Import" context="{'group_by': 'import_id'}"/>
+            </search>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,10 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_shop_purchase_import_user,shop.purchase.import user,model_shop_purchase_import,base.group_user,1,1,1,1
+access_shop_purchase_import_page_user,shop.purchase.import.page user,model_shop_purchase_import_page,base.group_user,1,1,1,1
+access_shop_purchase_import_line_user,shop.purchase.import.line user,model_shop_purchase_import_line,base.group_user,1,1,1,1
+access_shop_vendor_product_map_user,shop.vendor.product.map user,model_shop_vendor_product_map,base.group_user,1,1,1,1
+access_shop_bill_product_name_map_user,shop.bill.product.name.map user,model_shop_bill_product_name_map,base.group_user,1,1,1,1
+access_shop_product_price_history_user,shop.product.price.history user,model_shop_product_price_history,base.group_user,1,0,1,0
+access_shop_purchase_import_create_product_wizard_user,shop.purchase.import.create.product.wizard user,model_shop_purchase_import_create_product_wizard,base.group_user,1,1,1,1
+access_shop_bill_ocr_template_user,shop.bill.ocr.template user,model_shop_bill_ocr_template,base.group_user,1,1,1,1
+access_shop_bill_ocr_header_alias_user,shop.bill.ocr.header.alias user,model_shop_bill_ocr_header_alias,base.group_user,1,1,1,1

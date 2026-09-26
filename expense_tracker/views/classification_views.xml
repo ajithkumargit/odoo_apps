@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="finance_classification_list" model="ir.ui.view">
+        <field name="name">finance.classification.list</field>
+        <field name="model">finance.classification</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="active" optional="hide"/>
+            </list>
+        </field>
+    </record>
+    <record id="finance_classification_form" model="ir.ui.view">
+        <field name="name">finance.classification.form</field>
+        <field name="model">finance.classification</field>
+        <field name="arch" type="xml">
+            <form><sheet><group><field name="name"/><field name="sequence"/><field name="active"/></group></sheet></form>
+        </field>
+    </record>
+    <record id="finance_classification_action" model="ir.actions.act_window">
+        <field name="name">Classifications</field>
+        <field name="res_model">finance.classification</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <menuitem id="finance_classification_menu" name="Classifications" parent="menu_finance_transactions"
+              action="finance_classification_action" sequence="30" groups="base.group_user"/>
+
+    <record id="finance_category_classification_list" model="ir.ui.view">
+        <field name="name">finance.category.classification.list</field>
+        <field name="model">finance.category</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="name"/>
+                <field name="classification_id"/>
+                <field name="parent_id"/>
+                <field name="type_id" optional="show"/>
+                <field name="active" optional="hide"/>
+            </list>
+        </field>
+    </record>
+    <record id="finance_category_classification_form" model="ir.ui.view">
+        <field name="name">finance.category.classification.form</field>
+        <field name="model">finance.category</field>
+        <field name="arch" type="xml">
+            <form><sheet>
+                <group><field name="name"/><field name="classification_id"/><field name="parent_id"/>
+                    <field name="type_id"/><field name="active"/><field name="color" widget="color_picker"/>
+                    <field name="match_text_ids" widget="many2many_tags"/>
+                </group>
+                <field name="child_ids">
+                    <list editable="bottom"><field name="name"/><field name="classification_id"/>
+                        <field name="match_text_ids" widget="many2many_tags"/>
+                    </list>
+                </field>
+            </sheet></form>
+        </field>
+    </record>
+    <record id="finance_category_classification_search" model="ir.ui.view">
+        <field name="name">finance.category.classification.search</field>
+        <field name="model">finance.category</field>
+        <field name="arch" type="xml">
+            <search><field name="name"/><field name="classification_id"/>
+                <filter name="unclassified" string="Unclassified" domain="[('classification_id', '=', False)]"/>
+                <filter name="group_classification" string="Classification" context="{'group_by': 'classification_id'}"/>
+            </search>
+        </field>
+    </record>
+</odoo>
