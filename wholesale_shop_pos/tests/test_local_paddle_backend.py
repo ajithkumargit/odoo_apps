@@ -3,6 +3,8 @@ import importlib.util
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 import numpy as np
@@ -22,8 +24,29 @@ class TestPaddleBackend(unittest.TestCase):
         def start(args, **kwargs):
             self.assertEqual(args[-1], '--serve')
             self.assertNotIn('shell', kwargs)
+            self.assertEqual(Path(kwargs['cwd']), Path(backend.__file__).resolve().parents[1])
             return POPEN([sys.executable, '-u', '-c', code], **kwargs)
         return patch.object(backend.subprocess, 'Popen', side_effect=start)
+
+    def test_linux_selects_existing_ocr_virtualenv(self):
+        with patch.object(backend, "os", SimpleNamespace(name="posix", environ={})), \
+             patch.object(backend.Path, "is_file", return_value=True):
+            self.assertEqual(str(backend.python_path()).replace("\\", "/"), "/opt/kmlshop/ocr-venv/bin/python3")
+
+    def test_models_work_without_manual_runtime_marker(self):
+        with tempfile.TemporaryDirectory() as temp:
+            models = Path(temp)
+            for name in ("PP-OCRv5_mobile_det", "ta_PP-OCRv5_mobile_rec"):
+                folder = models / name
+                folder.mkdir()
+                for filename in ("inference.yml", "inference.json", "inference.pdiparams"):
+                    (folder / filename).write_text("test")
+            with patch.object(backend, "MODELS", models), \
+                 patch.object(backend, "python_path", return_value=Path(sys.executable)):
+                self.assertTrue(backend.available())
+                (models / "ta_PP-OCRv5_mobile_rec" / "inference.pdiparams").unlink()
+                self.assertFalse(backend.available())
+                self.assertIn("incomplete", backend.unavailable_reason())
 
     def test_reuses_process_and_sends_png_privately(self):
         with self.launch(READER) as launch:

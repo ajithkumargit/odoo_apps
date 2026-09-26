@@ -32,6 +32,22 @@ class TestLocalOCRPipeline(unittest.TestCase):
         preprocess.assert_not_called()
         backend.return_value.run_tesseract.assert_not_called()
 
+    def test_paddle_extraction_does_not_require_tesseract_installation(self):
+        image = np.zeros((100, 100, 3), dtype=np.uint8)
+        backend = Mock()
+        backend.LocalOCRBackendError = type("BackendError", (Exception,), {})
+        backend.get_backend_info.side_effect = backend.LocalOCRBackendError("Tesseract missing")
+        parsed = ocr._parse_page([], 100, 100)
+        parsed.update({"bill_number": "TEST", "lines": [{"description": "Product"}]})
+        with patch.object(ocr, "_image_from_bytes", return_value=image), \
+             patch.object(ocr, "_get_tesseract_backend", return_value=backend), \
+             patch.object(ocr, "_get_paddle_backend") as paddle, \
+             patch.object(ocr, "_ocr_page_candidate", return_value=("PaddleOCR Tamil+English", parsed, 1)):
+            paddle.return_value.available.return_value = True
+            result, engine, fingerprint = ocr.extract_bill(b"image", "image/jpeg")
+        self.assertEqual(len(result["lines"]), 1)
+        backend.get_orientation.assert_not_called()
+
     def test_paddle_reserves_fallback_time(self):
         with patch.object(ocr.time, "monotonic", return_value=100):
             self.assertEqual(ocr._paddle_time_budget(205), 85)

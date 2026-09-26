@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import threading
 import time
 from concurrent.futures import Future, TimeoutError
@@ -13,14 +14,32 @@ MODELS = Path(__file__).resolve().parents[1] / ".ocr-models" / "paddle"
 
 
 def python_path():
-    return Path(os.environ.get("SHOP_PADDLE_PYTHON", str(ROOT / ".ocr-runtime" / "python312" / "python.exe")))
+    explicit = os.environ.get("SHOP_PADDLE_PYTHON")
+    if explicit:
+        return Path(explicit).expanduser().absolute()
+    candidates = (
+        (ROOT / ".ocr-runtime" / "python312" / "python.exe",)
+        if os.name == "nt" else
+        (Path("/opt/kmlshop/ocr-venv/bin/python3"), ROOT / ".ocr-runtime" / "paddle-venv" / "bin" / "python3")
+    )
+    return next((path for path in candidates if path.is_file()), Path(sys.executable))
+
+
+def unavailable_reason():
+    python = python_path()
+    if not python.is_file():
+        return "OCR Python is missing: %s. Set SHOP_PADDLE_PYTHON." % python
+    for name in ("PP-OCRv5_mobile_det", "ta_PP-OCRv5_mobile_rec"):
+        directory = MODELS / name
+        if not all((directory / file).is_file() for file in ("inference.yml", "inference.json", "inference.pdiparams")):
+            return "PaddleOCR model %s is missing or incomplete. Run paddle_bill_worker.py --setup." % name
+    return ""
 
 
 def available():
-    return python_path().is_file() and (MODELS / "runtime-ready").is_file() and all(
-        (MODELS / name / "inference.yml").is_file()
-        for name in ("PP-OCRv5_mobile_det", "ta_PP-OCRv5_mobile_rec")
-    )
+    # Model files are sufficient to attempt inference. No manual bill test or
+    # write permission inside downloaded model directories is required.
+    return not unavailable_reason()
 
 
 _lock = threading.Lock()
@@ -72,6 +91,7 @@ def recognize(image, timeout=55):
             _process = subprocess.Popen(
                 [str(python_path()), str(Path(__file__).with_name("paddle_bill_worker.py")), "--serve"],
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                cwd=str(Path(__file__).resolve().parents[1]),
                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )
         future = Future()

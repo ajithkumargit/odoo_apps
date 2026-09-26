@@ -2689,6 +2689,10 @@ def _ocr_page_candidate(image, page_number, rectify, method_prefix, deadline=Non
             return None
 
     paddle = _get_paddle_backend()
+    if allow_paddle and not paddle.available():
+        reason = paddle.unavailable_reason()
+        failures.append("PaddleOCR unavailable: " + reason)
+        _logger.warning("PaddleOCR unavailable; extraction uses Tesseract: %s", reason)
     if allow_paddle and paddle.available() and _paddle_time_budget(deadline) >= 10:
         try:
             # Keep glyphs/decimal points intact for the neural reader. The
@@ -2778,14 +2782,17 @@ def _extract_bill(file_bytes, mimetype):
         # Only OCR a page when its native text did not reconstruct a table.
         if image is not None:
             backend = _get_tesseract_backend()
+            suggested_rotation = None
             try:
                 backend.get_backend_info()
+                suggested_rotation = backend.get_orientation(
+                    _resize_for_ocr(image, target_width=1400, max_side=1800),
+                    timeout=min(8, max(0.1, deadline - time.monotonic())),
+                )
             except backend.LocalOCRBackendError as error:
-                raise LocalOCRError(str(error)) from error
-            suggested_rotation = backend.get_orientation(
-                _resize_for_ocr(image, target_width=1400, max_side=1800),
-                timeout=min(8, max(0.1, deadline - time.monotonic())),
-            )
+                if not _get_paddle_backend().available():
+                    raise LocalOCRError(str(error)) from error
+                _logger.warning("Tesseract orientation/fallback unavailable; using PaddleOCR: %s", error)
             for orientation_name, oriented_image in _orientation_variants(image, suggested_rotation):
                 if time.monotonic() >= deadline:
                     break

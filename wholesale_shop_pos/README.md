@@ -1,5 +1,30 @@
 # Wholesale Shop POS Core - Odoo 19
 
+### Linux server OCR setup
+
+From the deployed addon directory, run:
+
+```bash
+sudo bash scripts/setup_server_ocr.sh
+```
+
+For KML Shop this uses the `kmlshop` service and `/opt/kmlshop/ocr-venv/bin/python3`.
+It installs the isolated OCR versions used locally, downloads the Tamil/English
+models, validates inference without a private bill, configures the systemd OCR
+Python path and working directory, and restarts the service. It leaves Odoo's
+own Python dependencies in its existing virtualenv. Override `SHOP_ODOO_SERVICE`
+and `SHOP_PADDLE_PYTHON` for another deployment.
+
+To check the OCR runtime without downloading models or restarting:
+
+```bash
+sudo -u SERVICE_USER /opt/kmlshop/ocr-venv/bin/python3 models/paddle_bill_worker.py --check
+```
+
+The final JSON must contain `"ready": true`. Bill audit pages show the engine
+actually selected. Missing Paddle models now produce an explicit fallback warning.
+Use the same vendor OCR template and crop configuration when comparing two hosts.
+
 ### Local PaddleOCR Tamil + English
 
 PaddleOCR runs in a separate CPU subprocess, leaving Odoo's dependencies alone.
@@ -13,11 +38,11 @@ python custom_addons/wholesale_shop_pos/models/paddle_bill_worker.py "path/to/te
 
 Setup downloads official detection and Tamil/English recognition models once;
 it does not upload bills. Set `SHOP_PADDLE_PYTHON` to that Python executable.
-This workspace defaults to `.ocr-runtime/python312/python.exe`. After a successful
-local inference test creates the `runtime-ready` marker beside the models,
-extraction tries PaddleOCR without destructive grid removal, retaining Tesseract
-as its fallback. The existing page loop handles rotation. Paddle inference
-has a bounded 65-second subprocess limit, with time reserved for fallback. Restart Odoo manually after Python updates.
+Windows defaults to `.ocr-runtime/python312/python.exe`; Linux detects
+`/opt/kmlshop/ocr-venv/bin/python3` or uses `SHOP_PADDLE_PYTHON`. Installed model
+files enable inference without a manual test-image marker. Extraction tries
+PaddleOCR without destructive grid removal, retaining Tesseract as its fallback. The existing page loop handles rotation. Paddle inference
+has a bounded 120-second subprocess limit, with time reserved for fallback. Restart Odoo manually after Python updates.
 Run the folder benchmark below: installation is not proof of extraction accuracy.
 
 This is the first backend/core module for the wholesale shop POS project.

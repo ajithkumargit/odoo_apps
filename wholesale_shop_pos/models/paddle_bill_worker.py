@@ -13,10 +13,15 @@ RECOGNIZER = "ta_PP-OCRv5_mobile_rec"
 
 
 def main():
-    sys.path.insert(0, str(DEPS))
+    # Keep relative library paths out of /root when invoked with sudo -u.
+    image_path = (Path(sys.argv[1]).absolute() if len(sys.argv) > 1 and not sys.argv[1].startswith("--") else None)
+    os.chdir(Path(__file__).resolve().parents[1])
+    # Windows uses downloaded wheels; Linux uses its dedicated OCR virtualenv.
+    if os.name == "nt" and DEPS.is_dir():
+        sys.path.insert(0, str(DEPS))
     os.environ["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"] = "True"
     os.environ["OMP_NUM_THREADS"] = "2"
-    os.environ["PADDLE_PDX_CACHE_HOME"] = str(ROOT / ".ocr-runtime" / "paddle-cache")
+    os.environ.setdefault("PADDLE_PDX_CACHE_HOME", str(MODELS.parent / "paddle-cache"))
     if "--setup" in sys.argv:
         from huggingface_hub import snapshot_download
         for model in (DETECTOR, RECOGNIZER):
@@ -42,6 +47,18 @@ def main():
             enable_mkldnn=True, text_det_limit_side_len=1280,
             text_det_limit_type="max", text_recognition_batch_size=8,
         )
+    if "--check" in sys.argv:
+        from importlib.metadata import version
+        with contextlib.redirect_stdout(sys.stderr):
+            # Exercise inference without needing a private bill or marker file.
+            list(engine.predict(np.full((128, 256, 3), 255, dtype=np.uint8)))
+        print(json.dumps({
+            "ready": True, "python": sys.executable, "models": str(MODELS),
+            "versions": {name: version(name) for name in ("paddleocr", "paddlepaddle", "paddlex")},
+            "detector": DETECTOR, "recognizer": RECOGNIZER,
+        }), flush=True)
+        return
+
     def recognize(content):
         with contextlib.redirect_stdout(sys.stderr):
             image = cv2.imdecode(np.frombuffer(content, dtype=np.uint8), cv2.IMREAD_COLOR)
@@ -56,8 +73,6 @@ def main():
                 polygons = data.get("rec_polys", [])
                 for text, score, polygon in zip(data.get("rec_texts", []), data.get("rec_scores", []), polygons):
                     output.append({"text": text, "score": float(score), "box": np.asarray(polygon).tolist()})
-        if output:
-            (MODELS / "runtime-ready").write_text("Local inference completed. Review bill accuracy separately.\n", encoding="utf-8")
         print(json.dumps(output, ensure_ascii=True), flush=True)
 
     if "--serve" in sys.argv:
@@ -73,7 +88,7 @@ def main():
                 raise ValueError("Incomplete image")
             recognize(content)
     else:
-        recognize(Path(sys.argv[1]).read_bytes() if len(sys.argv) > 1 else sys.stdin.buffer.read())
+        recognize(image_path.read_bytes() if image_path else sys.stdin.buffer.read())
 
 
 if __name__ == "__main__":

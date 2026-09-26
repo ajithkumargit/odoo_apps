@@ -1,0 +1,4 @@
+# Match the tested isolated local OCR engine on the Linux server.
+paddlepaddle==3.2.0
+paddleocr==3.7.0
+paddlex[ocr]==3.7.2
