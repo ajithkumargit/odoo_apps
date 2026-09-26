@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="product_template_form_view_retail_pos_bridge" model="ir.ui.view">
+        <field name="name">product.template.form.retail.pos.bridge</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Retail POS">
+                    <group>
+                        <group string="Quantity Pricing">
+                            <field name="retail_wholesale_min_qty"/>
+                            <field name="retail_purchase_tax_percent"/>
+                            <field name="retail_profit_percent"/>
+                            <field name="retail_calculated_selling_price" readonly="1"/>
+                        </group>
+                        <group string="Formula">
+                            <label
+                                for="retail_calculated_selling_price"
+                                string="Calculated price = cost price + purchase tax + profit %"
+                            />
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -62,6 +62,19 @@ class ExcelData(models.Model):
         new_filename = f"processed_statement-{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}.xlsx"
 
         return result
+
+    def create(self, vals):
+        result = super(ExcelData, self).create(vals)
+        for rec in result:
+            if rec.get('file'):
+                if rec.get('file_type') == 'pdf':pass
+                elif rec.get('file_type') == 'excel':
+                    output = self.customizeExcel({'uploadedFIle':io.BytesIO(base64.b64decode(rec.get('file')))})
+                    if output.get('status') == 'success' and output.get('message') == 'binary':
+                        rec.file = base64.b64encode(output['binary'].read())
+                        rec.name = output['filename']
+        return result
+
 class NameToCategory(models.Model):
     _name = 'name.to.category'
 

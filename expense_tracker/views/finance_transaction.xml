@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="finance_transaction_approved_list_view" model="ir.ui.view">
+        <field name="name">finance.transaction.approved.list</field>
+        <field name="model">finance.transaction</field>
+        <field name="arch" type="xml">
+            <list import="false">
+                <field name="transaction_datetime"/>
+                <field name="name"/>
+                <field name="type_id"/>
+                <field name="category_id" readonly="0"/>
+                <field name="subcategory_id"/>
+                <field name="classification_id"/>
+                <field name="amount" sum="Total"/>
+                <field name="account_id"/>
+                <field name="status_code" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    
+    <record id="view_import_wizard_form" model="ir.ui.view">
+        <field name="name">import.wizard.search</field>
+        <field name="model">import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Import File">
+                <group>
+
+
+                    <field name="file" filename="filename"/>
+                    <field name="filename" invisible="1"/>
+                    <field name="password" password="True"/>
+                </group>
+
+                <footer>
+                    <button name="action_import"
+                            type="object"
+                            string="Upload"
+                            class="btn-primary"/>
+
+                    <button string="Cancel"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_my_model_import_wizard" model="ir.actions.act_window">
+        <field name="name">Import File</field>
+        <field name="res_model">import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_import_wizard_form"/>
+        <field name="target">new</field>
+    </record>
+    
+    <record id="finance_transaction_inreview_list_view" model="ir.ui.view">
+        <field name="name">finance.transaction.inreview.list</field>
+        <field name="model">finance.transaction</field>
+        <field name="arch" type="xml">
+            <list import="false" >
+                <header>
+                    <button name="reallocate_category" type="object" string="Reallocate Category" class="btn-primary" display="always"/>
+                    <button name="action_approve_selected" type="object" string="Approve Selected" class="btn-success" />
+                    <button name="%(expense_tracker.action_my_model_import_wizard)d"
+                    string="Import"
+                    type="action"
+                    class="btn-primary" display="always"/>
+                </header>
+                <field name="transaction_datetime"/>
+                <field name="name"/>
+                <field name="type_id"/>
+                <field name="category_id" readonly="0"/>
+                <field name="subcategory_id"/>
+                <field name="classification_id"/>
+                <field name="amount" sum="Total"/>
+                <field name="account_id"/>
+                <field name="status_code" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+    
+
+    
+
+    <record id="finance_transaction_list_view" model="ir.ui.view">
+        <field name="name">finance.transaction.list</field>
+        <field name="model">finance.transaction</field>
+        <field name="arch" type="xml">
+            <list import="false"
+                 decoration-success="status_code == 'approved'"
+                decoration-danger="status_code == 'inreview'"
+            >
+                <header>
+                    <button name="reallocate_category" type="object" string="Reallocate Category" class="btn-primary" display="always"/>
+                    <button name="action_approve_selected" type="object" string="Approve Selected" class="btn-success" />
+                    <button name="%(expense_tracker.action_my_model_import_wizard)d"
+                    string="Import"
+                    type="action"
+                    class="btn-primary" display="always"/>
+                </header>
+                <field name="transaction_datetime"/>
+                <field name="name"/>
+                <field name="type_id"/>
+                <field name="category_id" readonly="0"/>
+                <field name="subcategory_id"/>
+                <field name="classification_id"/>
+                <field name="amount" sum="Total"/>
+                <field name="account_id"/>
+            </list>
+        </field>
+    </record>
+    
+   <record id="finance_transaction_calendar_view" model="ir.ui.view">
+        <field name="name">finance.transaction.calendar</field>
+        <field name="model">finance.transaction</field>
+        <field name="arch" type="xml">
+            <calendar string="Finance Transactions" date_start="transaction_datetime" color="category_id" >
+                <field name="category_id"/>
+                <field name="classification_id"/>
+                <field name="amount"/>
+                <field name="transaction_datetime"/>
+            </calendar>
+        </field>
+    </record>
+
+    <record id="finance_transaction_graph_view" model="ir.ui.view">
+        <field name="name">finance.transaction.graph</field>
+        <field name="model">finance.transaction</field>
+        <field name="arch" type="xml">
+            <graph string="Finance Analysis" type="bar">
+                <field name="amount" type="measure"/>
+                <field name="running_balance" type="measure"/>
+                <field name="type_id" position="before"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="finance_transaction_kanban_view" model="ir.ui.view">
+        <field name="name">finance.transaction.kanban</field>
+        <field name="model">finance.transaction</field>
+        <field name="arch" type="xml">
+            <kanban
+                default_group_by="subcategory_id"
+                class="o_kanban_small_column">
+
+                <field name="name"/>
+                <field name="amount"/>
+                <field name="category_id"/>
+                <field name="type_id"/>
+                <field name="status"/>
+                <field name="transaction_datetime"/>
+                <templates>
+
+                    <t t-name="card">
+
+                        <div class="oe_kanban_card">
+
+                            <div>
+                                <strong>
+                                    <field name="name"/>
+                                </strong>
+                            </div>
+
+                            <div>
+                                ₹ <field name="amount"/>
+                            </div>
+
+                            <div>
+                                <field name="type_id"/>
+                            </div>
+
+                            <div>
+                                <field name="status"/>
+                            </div>
+                            <div>
+                                <field name="transaction_datetime" widget="datetime"/>
+                            </div>
+
+                        </div>
+
+                    </t>
+
+                </templates>
+
+            </kanban>
+        </field>
+    </record>
+
+    <record id="finance_transaction_search_view" model="ir.ui.view">
+        <field name="name">finance.transaction.search</field>
+        <field name="model">finance.transaction</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="category_id"/>
+                <field name="subcategory_id"/>
+                <field name="classification_id"/>
+                <field name="transaction_datetime"/>
+                <filter string="Classification" name="group_classification" context="{'group_by': 'classification_id'}"/>
+                <filter string="Type"
+                        name="group_type"
+                        context="{'group_by':'type_id'}"/>
+
+                <filter string="Category"
+                        name="group_category"
+                        context="{'group_by':'category_id'}"/>
+
+                <filter string="Sub Category"
+                        name="group_subcategory"
+                        context="{'group_by':'subcategory_id'}"/>
+
+                <filter string="Month"
+                        name="group_month"
+                        context="{'group_by':'transaction_datetime:month'}"/>
+
+                <filter string="Year"
+                        name="group_year"
+                        context="{'group_by':'transaction_datetime:year'}"/>
+            </search>
+        </field>
+    </record>
+
+
+
+    <record id="action_finance_allocation_board" model="ir.actions.act_window">
+        <field name="name">Allocation Board</field>
+        <field name="res_model">finance.transaction</field>
+        <field name="view_mode">kanban,form</field>
+        <field name="context">{'group_by':'subcategory_id'}</field>
+    </record>
+
+    <record id="finance_transaction_action_view" model="ir.actions.act_window">
+            <field name="name">Finance Transactions</field>
+            <field name="res_model">finance.transaction</field>
+            <field name="view_mode">list,form,graph,calendar,search</field>
+            <field name="context">{'import_enabled': False}</field>
+    </record>
+
+    <record id="finance_transaction_inreview_action_view" model="ir.actions.act_window">
+        <field name="name">In Review Finance Transactions</field>
+        <field name="res_model">finance.transaction</field>
+        <field name="view_mode">list,form,graph,calendar</field>
+        <field name="domain">[('status_code','=','inreview')]</field>
+        <field name="view_id" ref="finance_transaction_inreview_list_view"/>
+    </record>
+
+    <record id="finance_transaction_approved_action_view" model="ir.actions.act_window">
+        <field name="name">Approved Finance Transactions</field>
+        <field name="res_model">finance.transaction</field>
+        <field name="view_mode">list,form,graph,calendar</field>
+        <field name="domain">[('status_code','=','approved')]</field>
+        <field name="view_id" ref="finance_transaction_approved_list_view"/>
+    </record>
+
+    <record id="finance_transaction_categories_action_view" model="ir.actions.act_window">
+        <field name="name">Finance Transaction Categories</field>
+        <field name="res_model">finance.category</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem
+        id="menu_finance_transactions"
+        name="Finance Transactions"
+        sequence="20"/>
+
+    <menuitem
+        id="finance_transaction_status_menu"
+        name="Transactions Status"
+        parent="menu_finance_transactions"
+        sequence="10"/>
+
+    <menuitem
+        id="finance_transaction_approval_menu"
+        name="Approved Transactions"
+        parent="finance_transaction_status_menu"
+        action="finance_transaction_approved_action_view"
+        sequence="10"/>
+
+    <menuitem
+        id="finance_transaction_inreview_menu"
+        name="In Review Transactions"
+        parent="finance_transaction_status_menu"
+        action="finance_transaction_inreview_action_view"
+        sequence="20"/>
+
+    <menuitem
+        id="finance_allocation_board_menu"
+        name="Allocation Board"
+        parent="menu_finance_transactions"
+        action="action_finance_allocation_board"
+        sequence="20"/>
+     <menuitem
+        id="menu_sub_finance_transactions"
+        name="Transactions"
+        parent="menu_finance_transactions"
+        action="finance_transaction_action_view"
+        sequence="10"/>
+
+        <menuitem
+                id="menu_sub_finance_transaction_categories"
+                name="Categories"
+                parent="menu_finance_transactions"
+                action="finance_transaction_categories_action_view"
+                sequence="20"/>
+
+</odoo>

@@ -27,3 +27,13 @@ Thumbs.db
 .vscode/
 *.sublime-workspace
 *.sublime-project
+
+# Local OCR downloads and test databases
+.ocr-models/
+.odoo-data/
+.ocr-runtime/
+.pytest_cache/
+
+# Nested checkout of this same repository
+/odoo_apps/
+/wholesale_shop_pos/tests/odoo-test.conf

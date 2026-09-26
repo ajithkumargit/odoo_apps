@@ -5,19 +5,20 @@
 {
     'name': 'Excel Customize',
     'version': '1.1',
-    'category': 'Technical',
+    'category': 'Human Resources/Expenses',
     'sequence': 6,
     'summary': '',
     'description': """""",
     'depends': ['base'
     ],
     'data': [
-        "security/ir.model.access.csv"
+        "security/ir.model.access.csv",
+        "views/excel_data.xml"
     ],
     'installable': True,
     'auto_install': False,
     'assets': {
     },
-    'author': 'Ajith_Kumar',
+    'author': 'auFish',
     'license': 'LGPL-3',
 }

@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+<t t-name="expense_tracker.MultiSelect">
+
+<div class="o_multi_select position-relative"
+     t-ref="root">
+
+    <!-- Header -->
+    <div class="form-control d-flex justify-content-between align-items-center"
+         style="cursor:pointer;min-height:38px;"
+         t-on-click="toggleDropdown">
+
+        <span class="text-truncate">
+            <t t-esc="selectedText"/>
+        </span>
+
+        <i t-att-class="state.open ? 'fa fa-chevron-up' : 'fa fa-chevron-down'"/>
+    </div>
+
+    <!-- Dropdown -->
+    <div t-if="state.open"
+         class="position-absolute bg-white border rounded shadow w-100 mt-1"
+         style="z-index:1050;">
+
+        <!-- Search -->
+        <div class="p-2 border-bottom">
+
+            <input
+                class="form-control"
+                type="text"
+                placeholder="Search..."
+                t-model="state.search"
+                t-on-click.stop=""
+            />
+
+        </div>
+
+        <!-- Clear -->
+        <div class="border-bottom text-end p-2">
+
+            <a href="#"
+               t-on-click.prevent="clearSelection">
+                Clear
+            </a>
+
+        </div>
+
+        <!-- Groups -->
+        <div style="max-height:320px;overflow-y:auto;">
+
+            <t t-if="filteredGroups.length">
+
+                <t t-foreach="filteredGroups"
+                   t-as="group"
+                   t-key="group.id">
+
+                    <!-- Group Header -->
+                    <div
+                        class="bg-light border-bottom px-2 py-2 d-flex justify-content-between align-items-center"
+                        style="cursor:pointer;"
+                        t-on-click="() => toggleGroup(group.id)">
+
+                        <div>
+
+                            <i
+                                t-att-class="isCollapsed(group.id)
+                                    ? 'fa fa-chevron-right me-2'
+                                    : 'fa fa-chevron-down me-2'"/>
+
+                            <strong>
+
+                                <t t-esc="group.name"/>
+
+                            </strong>
+
+                        </div>
+
+                        <small class="text-muted">
+
+                            <t t-esc="groupSelectedCount(group)"/>
+
+                            /
+
+                            <t t-esc="group.children.length"/>
+
+                        </small>
+
+                    </div>
+
+                    <!-- Items -->
+                    <div t-if="!isCollapsed(group.id)">
+
+                        <t
+                            t-foreach="group.children"
+                            t-as="item"
+                            t-key="item.id">
+
+                            <label
+                                class="d-flex align-items-center px-4 py-2"
+                                style="cursor:pointer;">
+
+                                <input
+                                    class="form-check-input me-2"
+                                    type="checkbox"
+                                    t-att-data-id="item.id"
+                                    t-att-checked="isSelected(item.id)"
+                                    t-on-click.stop="toggleItem"/>
+
+                                <span>
+
+                                    <t t-esc="item.name"/>
+
+                                </span>
+
+                            </label>
+
+                        </t>
+
+                    </div>
+
+                </t>
+
+            </t>
+
+            <t t-else="">
+
+                <div class="text-center text-muted py-3">
+
+                    No records found
+
+                </div>
+
+            </t>
+
+        </div>
+
+    </div>
+
+</div>
+
+</t>
+
+</templates>

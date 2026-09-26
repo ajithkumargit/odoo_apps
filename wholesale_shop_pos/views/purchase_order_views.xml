@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_purchase_order_form_wholesale_shop_ocr" model="ir.ui.view">
+        <field name="name">purchase.order.form.wholesale.shop.ocr</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='partner_id']" position="attributes">
+                <attribute name="domain">[('shop_is_vendor', '=', True)]</attribute>
+                <attribute name="context">{'default_shop_is_vendor': True, 'show_vat': True}</attribute>
+            </xpath>
+            <xpath expr="//header/field[@name='state']" position="before">
+                <button name="action_shop_receive_and_create_bill"
+                        string="Receive All &amp; Create Draft Bill"
+                        type="object"
+                        class="btn-primary"
+                        title="Final stock action: confirm the order, receive all untracked quantities, and prepare the vendor bill"
+                        confirm="This confirms the order, receives every untracked product in full, updates inventory, and creates a draft vendor bill. Continue?"
+                        invisible="not shop_purchase_import_id or shop_import_state != 'po_created' or state not in ('draft', 'sent', 'purchase') or invoice_count != 0"/>
+                <button name="action_shop_revert_import"
+                        string="Revert Import"
+                        type="object"
+                        class="btn-secondary"
+                        icon="fa-undo"
+                        title="Cancel the draft bill, reverse received stock, cancel this order, and return the import to Review"
+                        confirm="This will cancel the draft vendor bill, create and validate stock returns, cancel this purchase order, and reopen the import. Continue?"
+                        invisible="not shop_purchase_import_id or shop_import_state != 'po_created'"/>
+            </xpath>
+
+            <xpath expr="//notebook" position="inside">
+                <page string="OCR Supplier Bill" name="shop_ocr_supplier_bill">
+                    <field name="shop_purchase_import_id" invisible="1"/>
+                    <field name="shop_import_currency_id" invisible="1"/>
+                    <field name="shop_import_unmatched_count" invisible="1"/>
+                    <group>
+                        <group string="Upload and Extract">
+                            <field name="shop_bill_file"
+                                   filename="shop_bill_file_name"
+                                   options="{'accepted_file_extensions': 'image/*,.pdf'}"
+                                   readonly="state not in ('draft', 'sent')"/>
+                            <field name="shop_bill_file_name" invisible="1"/>
+                            <field name="shop_ocr_template_id"
+                                   options="{'no_create': True}"
+                                   readonly="state not in ('draft', 'sent')"/>
+                            <field name="shop_import_state" widget="badge" readonly="1"/>
+                        </group>
+                        <group string="Extracted Totals">
+                            <field name="shop_import_untaxed_amount" readonly="1"/>
+                            <field name="shop_import_tax_amount" readonly="1"/>
+                            <field name="shop_import_total_amount" readonly="1"/>
+                        </group>
+                    </group>
+                    <div class="d-flex gap-2 mb-3">
+                        <button name="action_shop_extract_bill" string="Extract Bill" type="object" class="btn-primary"
+                                invisible="state not in ('draft', 'sent') or not shop_bill_file"/>
+                        <button name="action_shop_create_missing_products" string="Create Missing Products" type="object" class="btn-secondary"
+                                invisible="state not in ('draft', 'sent') or not shop_purchase_import_id or shop_import_unmatched_count == 0"/>
+                        <button name="action_shop_match_taxes" string="Match Extracted Taxes" type="object" class="btn-secondary"
+                                invisible="state not in ('draft', 'sent') or not shop_purchase_import_id"/>
+                        <button name="action_shop_apply_ocr_lines" string="Apply Reviewed Lines to RFQ" type="object" class="btn-primary"
+                                invisible="state not in ('draft', 'sent') or not shop_purchase_import_id or shop_import_state not in ('review', 'ready')"/>
+                        <button name="action_shop_open_import" string="Open Audit Record" type="object" class="btn-link"
+                                invisible="not shop_purchase_import_id"/>
+                    </div>
+                    <field name="shop_import_line_ids" readonly="state not in ('draft', 'sent')">
+                        <list editable="top" create="0" delete="0" class="o_shop_bill_lines_list">
+                            <field name="sequence" widget="handle"/>
+                            <field name="raw_description" readonly="1"/>
+                            <field name="corrected_description" string="POS Product Name"/>
+                            <field name="vendor_product_code" optional="hide"/>
+                            <field name="barcode" optional="show"/>
+                            <field name="hsn_code" optional="show"/>
+                            <field name="product_id"/>
+                            <button name="action_open_create_product" type="object" icon="fa-plus-square"
+                                    title="Create Product / Variant"
+                                    class="btn-link p-0 o_shop_compact_line_button"
+                                    width="28px" invisible="product_id"/>
+                            <field name="quantity"/>
+                            <field name="free_quantity" optional="show"/>
+                            <field name="purchase_rate"/>
+                            <field name="discount_percent" optional="show"/>
+                            <field name="gst_percent" readonly="1" optional="show"/>
+                            <field name="tax_ids" widget="many2many_tags"/>
+                            <field name="purchase_unit_price_incl_tax" readonly="1" optional="show"/>
+                            <field name="units_per_purchase_qty" optional="show"/>
+                            <field name="item_unit_cost_incl_tax" readonly="1" optional="show"/>
+                            <field name="taxable_amount" readonly="1"/>
+                            <field name="tax_amount" readonly="1"/>
+                            <field name="total_amount" readonly="1"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

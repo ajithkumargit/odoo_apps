@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.wholesale.shop.pos</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Wholesale Shop" string="Wholesale Shop" name="wholesale_shop_pos"
+                     groups="base.group_system">
+                    <block title="Local Supplier Bill Extraction" name="wholesale_bill_extraction">
+                        <setting id="wholesale_local_ocr"
+                                 string="Offline OCR enabled"
+                                 help="Supplier bill images are processed locally by PaddleOCR with Tesseract fallback, while Fitz/PyMuPDF handles PDFs. No API key is needed and bill files are not sent externally.">
+                            <div class="text-muted">
+                                Uses local Tamil/English OCR, manual image cropping, and coordinate-based table reconstruction.
+                            </div>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>

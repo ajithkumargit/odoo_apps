@@ -1,0 +1,16 @@
+.o_shop_bill_lines_list {
+    th.o_list_button,
+    td.o_list_button:has(.o_shop_compact_line_button) {
+        width: 28px !important;
+        min-width: 28px !important;
+        max-width: 28px !important;
+        padding-inline: 2px !important;
+        text-align: center;
+    }
+
+    .o_shop_compact_line_button {
+        width: 22px;
+        min-width: 22px;
+        padding: 0 !important;
+    }
+}

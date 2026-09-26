@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="wholesale_shop_pos.PosBarcodeCamera">
+        <BarcodeVideoScanner t-if="liveSupported" t-props="props"/>
+        <div t-else="" class="h-100 d-flex flex-column align-items-center justify-content-center gap-3 p-3 text-center">
+            <i class="fa fa-barcode fa-3x"/>
+            <strong>Scan a barcode photo</strong>
+            <span>Take a photo of the barcode or choose an existing image.</span>
+            <span class="text-muted">Live camera scanning requires HTTPS when using an IP address.</span>
+            <div t-if="state.error" class="alert alert-warning" role="alert" t-esc="state.error"/>
+            <button type="button" class="btn btn-primary btn-lg" t-on-click="takePhoto" t-att-disabled="state.busy">
+                <i class="fa fa-camera me-2"/>
+                <t t-if="state.busy">Reading barcode...</t>
+                <t t-else="">Take a photo / Choose image</t>
+            </button>
+            <input type="file" accept="image/*" capture="environment" class="d-none"
+                   t-ref="photoInput" t-on-change="scanPhoto"/>
+        </div>
+    </t>
+</templates>

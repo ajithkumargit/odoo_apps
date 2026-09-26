@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="classification_savings" model="finance.classification">
+        <field name="name">Savings</field>
+        <field name="sequence">10</field>
+    </record>
+    <record id="classification_mandatory" model="finance.classification">
+        <field name="name">Mandatory</field>
+        <field name="sequence">20</field>
+    </record>
+</odoo>
