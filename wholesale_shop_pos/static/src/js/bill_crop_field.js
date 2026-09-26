@@ -4,7 +4,7 @@ import { registry } from "@web/core/registry";
 import { imageUrl } from "@web/core/utils/urls";
 import { isBinarySize } from "@web/core/utils/binary";
 import { standardFieldProps } from "@web/views/fields/standard_field_props";
-import { Component, useRef, useState } from "@odoo/owl";
+import { Component, useEffect, useRef, useState } from "@odoo/owl";
 
 export class BillCropField extends Component {
     static template = "wholesale_shop_pos.BillCropField";
@@ -12,7 +12,11 @@ export class BillCropField extends Component {
 
     setup() {
         this.image = useRef("image");
+        this.cacheKey = Date.now();
         this.state = useState({ dragging: false, startX: 0, startY: 0, x: 0, y: 0 });
+        useEffect(() => {
+            this.state.dragging = false;
+        }, () => [this.props.record.resId, this.props.record.data[this.props.name], this.props.record.data.write_date]);
     }
 
     get url() {
@@ -22,7 +26,7 @@ export class BillCropField extends Component {
         }
         if (isBinarySize(value)) {
             return imageUrl(this.props.record.resModel, this.props.record.resId, this.props.name, {
-                unique: this.props.record.data.write_date,
+                unique: `${this.props.record.data.write_date?.ts || this.props.record.data.write_date || ""}-${this.cacheKey}`,
             });
         }
         const kind = value[0] === "i" ? "png" : value[0] === "U" ? "webp" : "jpeg";

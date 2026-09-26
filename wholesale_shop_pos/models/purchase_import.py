@@ -182,6 +182,13 @@ class ShopPurchaseImport(models.Model):
         return records
 
     def write(self, vals):
+        if "original_file" in vals:
+            vals = dict(vals)
+            # A newly uploaded file must not inherit the previous image's crop.
+            # Preserve a crop explicitly selected on the new image before save.
+            for key, value in {"manual_crop_enabled": False, "crop_left": 0.0,
+                               "crop_top": 0.0, "crop_right": 100.0, "crop_bottom": 100.0}.items():
+                vals.setdefault(key, value)
         if vals.get("vendor_id"):
             self.env["res.partner"].browse(vals["vendor_id"])._mark_as_shop_vendor()
         result = super().write(vals)
@@ -910,6 +917,14 @@ class ShopPurchaseImportPage(models.Model):
             "crop_bottom": 100.0,
         })
         return True
+
+    def write(self, vals):
+        if "page_file" in vals:
+            vals = dict(vals)
+            for key, value in {"manual_crop_enabled": False, "crop_left": 0.0,
+                               "crop_top": 0.0, "crop_right": 100.0, "crop_bottom": 100.0}.items():
+                vals.setdefault(key, value)
+        return super().write(vals)
 
     def _prepare_page_file(self):
         self.ensure_one()

@@ -67,6 +67,7 @@
                                    options="{'accepted_file_extensions': 'image/*,.pdf'}"
                                    readonly="state == 'cancelled'"/>
                             <field name="original_file_name" invisible="1"/>
+                            <field name="write_date" invisible="1"/>
                             <field name="original_is_image" invisible="1"/>
                             <field name="purchase_order_id" readonly="1"/>
                             <field name="matched_line_count" readonly="1"/>
@@ -86,6 +87,7 @@
                                    readonly="state in ('po_created', 'cancelled')">
                                 <list string="Continuation Pages">
                                     <field name="is_image" column_invisible="True"/>
+                                    <field name="write_date" column_invisible="True"/>
                                     <field name="sequence" widget="handle"/>
                                     <field name="page_file" filename="page_file_name"/>
                                     <field name="page_file_name"/>
@@ -98,6 +100,7 @@
                                             <field name="page_file" widget="bill_camera" filename="page_file_name"
                                                    options="{'accepted_file_extensions': 'image/*,.pdf'}"/>
                                             <field name="page_file_name" invisible="1"/>
+                                            <field name="write_date" invisible="1"/>
                                             <field name="is_image" invisible="1"/>
                                             <field name="manual_crop_enabled" invisible="not is_image"/>
                                             <button name="action_reset_manual_crop" string="Reset Crop"

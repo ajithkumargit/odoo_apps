@@ -3,3 +3,4 @@ from . import test_local_bill_ocr
 from . import test_product_pos_category_sync
 from . import test_product_price_audit
 from . import test_user_menu_access
+from . import test_bill_image_replacement

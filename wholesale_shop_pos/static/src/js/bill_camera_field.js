@@ -14,7 +14,10 @@ export class BillCameraDialog extends Component {
 
     setup() {
         this.video = useRef("video");
-        this.state = useState({ ready: false, saving: false, error: "" });
+        this.state = useState({
+            ready: false, saving: false, error: "",
+            torchAvailable: false, torchOn: false, torchBusy: false, torchError: "",
+        });
         this.title = _t("Take a photo");
         onMounted(() => this.startCamera());
         onWillDestroy(() => {
@@ -26,6 +29,30 @@ export class BillCameraDialog extends Component {
     stopCamera() {
         this.stream?.getTracks().forEach((track) => track.stop());
         this.stream = null;
+        this.videoTrack = null;
+        if (!this.destroyed) {
+            this.state.ready = false;
+            this.state.torchAvailable = false;
+            this.state.torchOn = false;
+        }
+    }
+
+    async toggleTorch() {
+        const track = this.videoTrack;
+        if (!track || !this.state.torchAvailable || this.state.torchBusy || this.state.saving) return;
+        const enabled = !this.state.torchOn;
+        this.state.torchBusy = true;
+        this.state.torchError = "";
+        try {
+            await track.applyConstraints({ advanced: [{ torch: enabled }] });
+            if (!this.destroyed && this.videoTrack === track) this.state.torchOn = enabled;
+        } catch {
+            if (!this.destroyed) {
+                this.state.torchError = _t("Could not switch the flashlight. Your device or browser may not support camera lighting.");
+            }
+        } finally {
+            if (!this.destroyed) this.state.torchBusy = false;
+        }
     }
 
     async startCamera() {
@@ -39,6 +66,15 @@ export class BillCameraDialog extends Component {
                 return;
             }
             this.stream = stream;
+            this.videoTrack = stream.getVideoTracks()[0];
+            try {
+                this.state.torchAvailable = Boolean(
+                    this.videoTrack?.getCapabilities?.().torch && this.videoTrack.applyConstraints
+                );
+                this.state.torchOn = Boolean(this.videoTrack?.getSettings?.().torch);
+            } catch {
+                this.state.torchAvailable = false;
+            }
             this.video.el.srcObject = stream;
             await this.video.el.play();
         } catch (error) {
@@ -54,7 +90,7 @@ export class BillCameraDialog extends Component {
     }
 
     async capture() {
-        if (!this.state.ready || this.state.saving) return;
+        if (!this.state.ready || this.state.saving || this.state.torchBusy) return;
         const video = this.video.el;
         if (!video.videoWidth || !video.videoHeight) return;
         this.state.saving = true;

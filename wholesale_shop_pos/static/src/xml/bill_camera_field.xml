@@ -15,14 +15,23 @@
     <t t-name="wholesale_shop_pos.BillCameraDialog">
         <Dialog title="title" size="'lg'">
             <div t-if="state.error" class="alert alert-warning" role="alert" t-esc="state.error"/>
+            <div t-if="state.torchError" class="alert alert-warning" role="alert" t-esc="state.torchError"/>
             <p>Position the bill so the text is clear, then capture the photo.</p>
             <video t-ref="video" autoplay="autoplay" playsinline="playsinline" muted="muted"
                    class="w-100 rounded" style="max-height: 65vh; background: #111;"
                    t-on-loadeddata="onReady"/>
             <t t-set-slot="footer">
                 <button type="button" class="btn btn-primary" t-on-click="capture"
-                        t-att-disabled="!state.ready || state.saving">
+                        t-att-disabled="!state.ready || state.saving || state.torchBusy">
                     <i class="fa fa-camera me-1"/>Capture photo
+                </button>
+                <button type="button" class="btn btn-secondary" t-on-click="toggleTorch"
+                        t-att-disabled="!state.ready || !state.torchAvailable || state.torchBusy || state.saving"
+                        t-att-aria-pressed="state.torchOn ? 'true' : 'false'"
+                        t-att-title="state.torchAvailable ? 'Switch camera flashlight' : 'Flashlight is unavailable on this camera or browser'">
+                    <i class="fa fa-bolt me-1"/>
+                    <t t-if="state.torchOn">Flashlight Off</t>
+                    <t t-else="">Flashlight On</t>
                 </button>
                 <button type="button" class="btn btn-secondary" t-on-click="props.close">Cancel</button>
             </t>

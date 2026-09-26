@@ -31,7 +31,7 @@ export class BillImagePreview extends Component {
         if (!page) return "";
         const value = page.record.data[page.field];
         if (isBinarySize(value)) {
-            return imageUrl(page.record.resModel, page.record.resId, page.field, { unique: value });
+            return imageUrl(page.record.resModel, page.record.resId, page.field, { unique: page.record.data.write_date || value });
         }
         const kind = value[0] === "i" ? "png" : value[0] === "U" ? "webp" : value[0] === "R" ? "gif" : "jpeg";
         return `data:image/${kind};base64,${value}`;
