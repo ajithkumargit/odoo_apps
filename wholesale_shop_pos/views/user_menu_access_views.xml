@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_users_form_shop_menu_access" model="ir.ui.view">
+        <field name="name">res.users.form.shop.menu.access</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page name="shop_menu_access" string="Menu Access" groups="base.group_system" invisible="share">
+                    <div class="alert alert-info" role="alert">
+                        Choose which apps and submenu screens this user sees. Their Access Rights still control reading,
+                        creating and editing records. Administrators always retain all menus.
+                        After saving, ask the user to refresh their browser.
+                    </div>
+                    <button name="action_apply_shop_menu_preset" type="object" class="btn-primary mb-3"
+                            string="Use Shop Apps" help="Select Wholesale Shop, Point of Sale, Invoicing, Dashboards, Inventory and Purchase"/>
+                    <group>
+                        <field name="shop_restrict_menus"/>
+                        <field name="shop_allowed_app_ids" widget="many2many_tags"
+                               options="{'no_create': True, 'no_open': True}"
+                               invisible="not shop_restrict_menus"
+                               placeholder="Choose the apps this user can see"/>
+                        <field name="shop_hidden_menu_ids" widget="many2many_tags"
+                               options="{'no_create': True, 'no_open': True}"
+                               invisible="not shop_restrict_menus"
+                               placeholder="Optional: hide specific submenu screens"/>
+                    </group>
+                    <div class="text-muted" invisible="not shop_restrict_menus">
+                        Leaving Visible Apps empty hides all app menus for this user. Turn off Limit Visible Apps to restore normal menus.
+                    </div>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -35,6 +35,7 @@
         "views/product_views.xml",
         "views/res_config_settings_views.xml",
         "views/menu_views.xml",
+        "views/user_menu_access_views.xml",
     ],
     "assets": {
         "point_of_sale._assets_pos": [
