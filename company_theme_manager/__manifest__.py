@@ -23,7 +23,6 @@
             "company_theme_manager/static/src/js/theme_manager.js",
         ],
     },
-    
     "installable": True,
     "application": True,
 }

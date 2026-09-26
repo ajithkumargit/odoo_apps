@@ -23,6 +23,7 @@ class CompanyTheme(models.Model):
         "res.company",
         string="Company",
         required=True,
+        default=lambda self: self.env.company,
         index=True,
     )
 
