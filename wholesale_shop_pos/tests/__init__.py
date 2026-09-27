@@ -6,3 +6,4 @@ from . import test_user_menu_access
 from . import test_bill_image_replacement
 from . import test_line_name_crop
 from . import test_product_image_search
+from . import test_product_mrp

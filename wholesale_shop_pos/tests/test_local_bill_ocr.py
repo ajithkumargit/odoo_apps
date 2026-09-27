@@ -67,6 +67,7 @@ class TestLocalBillOCRParser(TransactionCase):
         self.assertEqual(first["quantity"], 10)
         self.assertEqual(first["free_quantity"], 2)
         self.assertAlmostEqual(first["purchase_rate"], 81.89, places=2)
+        self.assertEqual(first["mrp"], 92.0)
         self.assertEqual(first["gst_percent"], 5)
 
         # A close phone photo can cut off every serial number while retaining

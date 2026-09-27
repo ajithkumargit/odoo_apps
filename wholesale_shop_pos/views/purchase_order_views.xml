@@ -77,6 +77,7 @@
                                     width="28px" invisible="product_id"/>
                             <field name="quantity"/>
                             <field name="free_quantity" optional="show"/>
+                            <field name="mrp" optional="show"/>
                             <field name="purchase_rate"/>
                             <field name="discount_percent" optional="show"/>
                             <field name="gst_percent" readonly="1" optional="show"/>

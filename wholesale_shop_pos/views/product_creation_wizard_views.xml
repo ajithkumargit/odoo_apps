@@ -10,6 +10,7 @@
                     <field name="vendor_id" context="{'default_shop_is_vendor': True}"/>
                     <field name="company_id" invisible="1"/>
                     <field name="company_currency_id" invisible="1"/>
+                    <field name="bill_currency_id" invisible="1"/>
                     <field name="creation_mode" widget="radio"/>
                 </group>
                 <group>
@@ -32,6 +33,7 @@
                         <field name="barcode"/>
                         <field name="hsn_code"/>
                         <field name="standard_price"/>
+                        <field name="mrp"/>
                         <field name="box_quantity"/>
                     </group>
                 </group>

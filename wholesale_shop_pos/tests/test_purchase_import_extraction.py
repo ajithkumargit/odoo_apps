@@ -12,6 +12,12 @@ class TestPurchaseImportExtraction(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        # Keep tax matching deterministic on databases that already have GST.
+        # TransactionCase rolls this change back together with the fixtures.
+        cls.env['account.tax'].search([
+            ('company_id', '=', cls.env.company.id),
+            ('type_tax_use', '=', 'purchase'),
+        ]).write({'active': False})
         cls.vendor = cls.env["res.partner"].create({
             "name": "SNK Pillai Agencies",
             "shop_is_vendor": True,

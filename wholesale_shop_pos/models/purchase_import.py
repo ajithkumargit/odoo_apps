@@ -561,6 +561,7 @@ class ShopPurchaseImport(models.Model):
             "quantity": max(float(extracted_line.get("quantity") or 0.0), 0.0),
             "free_quantity": max(float(extracted_line.get("free_quantity") or 0.0), 0.0),
             "purchase_rate": max(float(extracted_line.get("purchase_rate") or 0.0), 0.0),
+            "mrp": max(float(extracted_line.get("mrp") or 0.0), 0.0),
             "discount_percent": min(max(float(extracted_line.get("discount_percent") or 0.0), 0.0), 100.0),
             "gst_percent": gst_percent,
             "tax_ids": [(6, 0, tax.ids)],
@@ -1011,6 +1012,10 @@ class ShopPurchaseImportLine(models.Model):
     quantity = fields.Float(default=1.0)
     free_quantity = fields.Float(default=0.0)
     purchase_rate = fields.Float(digits=(16, 6))
+    mrp = fields.Monetary(
+        string="MRP", currency_field="currency_id",
+        help="Printed maximum retail price per sale unit, including taxes. Does not change the bill total.",
+    )
     discount_percent = fields.Float(string="Discount %", default=0.0)
     units_per_purchase_qty = fields.Float(
         string="Units in One Qty",
@@ -1071,6 +1076,11 @@ class ShopPurchaseImportLine(models.Model):
                     line.raw_description,
                     line.product_id,
                 )
+
+    @api.constrains("mrp")
+    def _check_mrp(self):
+        if any(line.mrp < 0 for line in self):
+            raise ValidationError(_("MRP cannot be negative."))
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -1178,6 +1188,7 @@ class ShopPurchaseImportLine(models.Model):
         default_code=False,
         box_quantity=1.0,
         hsn_code=False,
+        mrp=None,
     ):
         self.ensure_one()
         self._check_product_barcode(product=product, barcode=barcode)
@@ -1189,6 +1200,12 @@ class ShopPurchaseImportLine(models.Model):
             ),
             "shop_box_qty": box_quantity or 1.0,
         }
+        retail_price = self.mrp if mrp is None else mrp
+        if retail_price > 0:
+            product_values["shop_mrp"] = self.currency_id._convert(
+                retail_price, product.with_company(self.company_id).currency_id, self.company_id,
+                self.import_id.bill_date or fields.Date.context_today(self),
+            )
         if barcode:
             product_values["barcode"] = barcode.strip()
         if default_code:
@@ -1258,6 +1275,7 @@ class ShopPurchaseImportLine(models.Model):
                 "default_barcode": self.barcode,
                 "default_hsn_code": self.hsn_code,
                 "default_standard_price": self._initial_cost_in_company_currency(),
+                "default_mrp": self.mrp,
                 "default_uom_id": (self.uom_id or self.env.ref("uom.product_uom_unit")).id,
             },
         }

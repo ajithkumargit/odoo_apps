@@ -151,6 +151,7 @@
                                     <field name="quantity"/>
                                     <field name="free_quantity" optional="show"/>
                                     <field name="uom_id" optional="hide"/>
+                                    <field name="mrp" optional="show"/>
                                     <field name="purchase_rate"/>
                                     <field name="discount_percent" optional="show"/>
                                     <field name="gst_percent" optional="show"/>
@@ -179,6 +180,7 @@
                                         <field name="quantity"/>
                                         <field name="free_quantity"/>
                                         <field name="uom_id"/>
+                                        <field name="mrp"/>
                                         <field name="purchase_rate"/>
                                         <field name="discount_percent"/>
                                         <field name="gst_percent"/>
@@ -273,6 +275,7 @@
                 <field name="barcode" optional="show"/>
                 <field name="hsn_code" optional="show"/>
                 <field name="quantity" readonly="1"/>
+                <field name="mrp" optional="show"/>
                 <field name="purchase_rate" readonly="1"/>
                 <field name="discount_percent" readonly="1"/>
                 <field name="gst_percent" readonly="1"/>

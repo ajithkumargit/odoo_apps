@@ -58,6 +58,8 @@ class ShopPurchaseImportCreateProductWizard(models.TransientModel):
         currency_field="company_currency_id",
         required=True,
     )
+    bill_currency_id = fields.Many2one(related="line_id.currency_id", readonly=True)
+    mrp = fields.Monetary(string="MRP", currency_field="bill_currency_id")
     uom_id = fields.Many2one("uom.uom", string="Unit", required=True)
     categ_id = fields.Many2one("product.category", string="Product Category")
     box_quantity = fields.Float(string="Box Quantity", default=1.0, required=True)
@@ -69,13 +71,15 @@ class ShopPurchaseImportCreateProductWizard(models.TransientModel):
         if self.creation_mode != "existing_variant":
             self.product_tmpl_id = False
 
-    @api.constrains("box_quantity", "standard_price")
+    @api.constrains("box_quantity", "standard_price", "mrp")
     def _check_values(self):
         for wizard in self:
             if wizard.box_quantity <= 0:
                 raise ValidationError(_("Box quantity must be greater than zero."))
             if wizard.standard_price < 0:
                 raise ValidationError(_("Initial cost cannot be negative."))
+            if wizard.mrp < 0:
+                raise ValidationError(_("MRP cannot be negative."))
 
     def _parse_variant_spec(self):
         self.ensure_one()
@@ -291,6 +295,7 @@ class ShopPurchaseImportCreateProductWizard(models.TransientModel):
         line._attach_created_product(
             product,
             standard_price=self.standard_price,
+            mrp=self.mrp,
             barcode=self.barcode,
             default_code=self.default_code,
             box_quantity=self.box_quantity,
