@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="wholesale_shop_pos.LineNameCropField">
+        <div class="d-flex align-items-center gap-1">
+            <t t-call="web.CharField"/>
+            <button t-if="canCrop" type="button" class="btn btn-link p-1 text-nowrap" title="Crop photo to extract this product name"
+                    aria-label="Crop Product Name" t-on-click.stop="crop"><i class="fa fa-crop"/> Crop Name</button>
+        </div>
+    </t>
+    <t t-name="wholesale_shop_pos.LineNameCropDialog">
+        <Dialog title="'Crop Product Name'" size="'lg'">
+            <p>Draw a rectangle around one product name. Extract it, review the text, then use it on this bill line.</p>
+            <div class="d-flex gap-2 mb-2">
+                <select t-if="state.sources.length" class="form-select" t-att-disabled="state.busy" t-on-change="select" aria-label="Bill image">
+                    <option t-foreach="state.sources" t-as="item" t-key="item_index" t-att-value="item_index" t-att-selected="item_index === state.index" t-esc="item.name"/>
+                </select>
+                <button type="button" class="btn btn-secondary text-nowrap" t-att-disabled="state.busy" t-on-click="() => this.file.el.click()">Upload / Take Photo</button>
+                <input type="file" accept="image/*" capture="environment" class="d-none" t-ref="file" t-on-change="upload"/>
+            </div>
+            <div t-if="state.error" class="alert alert-warning" role="alert" t-esc="state.error"/>
+            <div t-if="source" class="o_bill_crop_field overflow-hidden">
+                <div class="o_bill_crop_canvas" t-on-pointerdown="start" t-on-pointermove="move" t-on-pointerup="end" t-on-pointercancel="end" t-on-lostpointercapture="end">
+                    <img t-ref="image" t-att-src="source.url" alt="Select the product name" draggable="false"
+                         t-on-load="() => state.ready = true" t-on-error="() => { state.ready = false; state.error = 'Could not load this image. Upload a photo instead.'; }"/>
+                    <div class="o_bill_crop_selection" t-att-style="selectionStyle"/>
+                </div>
+            </div>
+            <p t-else="" class="text-muted">No bill image is available. Upload a line photo, or a screenshot of the name from a PDF.</p>
+            <button t-if="source" type="button" class="btn btn-link p-0 my-2" t-att-disabled="state.busy || !state.ready" t-on-click="whole">Select whole image</button>
+            <label for="crop_product_name_result" class="form-label d-block mt-2">Product name — review before applying</label>
+            <input id="crop_product_name_result" class="form-control" t-model="state.text" t-att-disabled="state.busy" placeholder="Extracted product name"/>
+            <t t-set-slot="footer">
+                <button type="button" class="btn btn-secondary" t-on-click="extract" t-att-disabled="state.busy || !state.ready || !state.crop">
+                    <t t-if="state.busy">Reading...</t><t t-else="">Extract Name</t>
+                </button>
+                <button type="button" class="btn btn-primary" t-on-click="apply" t-att-disabled="state.busy || !state.text.trim()">Use on This Line</button>
+                <button type="button" class="btn btn-secondary" t-on-click="props.close">Cancel</button>
+            </t>
+        </Dialog>
+    </t>
+</templates>

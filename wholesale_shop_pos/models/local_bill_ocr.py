@@ -2900,3 +2900,34 @@ def extract_bill(file_bytes, mimetype, header_aliases=None, template_config=None
     finally:
         _OCR_TEMPLATE.reset(template_token)
         _HEADER_ALIASES.reset(token)
+
+
+def extract_product_name(file_bytes):
+    """Read a name crop without requiring invoice metadata or table columns."""
+    import cv2
+    image = _image_from_bytes(file_bytes)
+    image = _resize_for_ocr(image, target_width=1400, max_side=2000)
+    image = cv2.copyMakeBorder(image, 24, 24, 24, 24, cv2.BORDER_CONSTANT, value=(255, 255, 255))
+    paddle = _get_paddle_backend()
+    failure = ""
+    if paddle.available():
+        try:
+            rows = paddle.recognize(image, timeout=90)
+            tokens = [_token(row["text"], row["score"], row["box"])
+                      for row in rows if row["score"] >= MIN_OCR_SCORE]
+            text = _normalise_space(" ".join(line["text"] for line in _group_lines([t for t in tokens if t])))
+            if text:
+                return {"text": text, "engine": "PaddleOCR Tamil+English"}
+        except (RuntimeError, ValueError, OSError, KeyError, TypeError) as error:
+            failure = str(error)
+    backend = _get_tesseract_backend()
+    try:
+        for psm in (7, 6):
+            tokens = backend.run_tesseract(image, page=1, psm=psm, timeout=20)
+            text = _normalise_space(" ".join(line["text"] for line in _group_lines(tokens)))
+            if text:
+                return {"text": text, "engine": "Tesseract Tamil+English"}
+    except backend.LocalOCRBackendError as error:
+        raise LocalOCRError(str(error)) from error
+    raise LocalOCRError("No product name could be read. Select a clearer, tighter crop around the name."
+                        + (" " + failure if failure else ""))

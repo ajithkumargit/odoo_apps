@@ -43,6 +43,8 @@
             "wholesale_shop_pos/static/src/xml/pos_barcode_camera.xml",
         ],
         "web.assets_backend": [
+            "wholesale_shop_pos/static/src/js/line_name_crop.js",
+            "wholesale_shop_pos/static/src/xml/line_name_crop.xml",
             "wholesale_shop_pos/static/src/js/product_barcode_field.js",
             "wholesale_shop_pos/static/src/xml/product_barcode_field.xml",
             ("after", "web/static/src/core/browser/router.js", "wholesale_shop_pos/static/src/js/store_router.js"),

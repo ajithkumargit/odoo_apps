@@ -140,7 +140,7 @@
                             <field name="line_ids" readonly="state in ('po_created', 'cancelled')" context="{'default_import_id': id}">
                                 <list editable="bottom" class="o_shop_bill_lines_list">
                                     <field name="sequence" widget="handle"/>
-                                    <field name="raw_description" width="200px"/>
+                                    <field name="raw_description" widget="line_name_crop" width="260px"/>
                                     <field name="vendor_product_code" optional="hide"/>
                                     <field name="barcode" optional="hide"/>
                                     <field name="product_id" width="200px"/>
@@ -165,7 +165,8 @@
                                 </list>
                                 <form>
                                     <group>
-                                        <field name="raw_description"/>
+                                        <field name="import_id" invisible="1"/>
+                                        <field name="raw_description" widget="line_name_crop"/>
                                         <field name="corrected_description"/>
                                         <field name="vendor_product_code"/>
                                         <field name="barcode"/>
@@ -266,7 +267,7 @@
                   class="o_shop_bill_lines_list">
                 <field name="import_id"/>
                 <field name="vendor_id"/>
-                <field name="raw_description" readonly="1"/>
+                <field name="raw_description" widget="line_name_crop"/>
                 <field name="corrected_description" string="POS Product Name"/>
                 <field name="vendor_product_code" optional="show"/>
                 <field name="barcode" optional="show"/>

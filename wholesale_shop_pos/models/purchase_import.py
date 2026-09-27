@@ -10,7 +10,7 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 from odoo.tools.float_utils import float_compare
 
-from .local_bill_ocr import LocalOCRError, extract_bill
+from .local_bill_ocr import LocalOCRError, extract_bill, extract_product_name
 
 
 _logger = logging.getLogger(__name__)
@@ -138,6 +138,43 @@ class ShopPurchaseImport(models.Model):
             "crop_right": 100.0, "crop_bottom": 100.0,
         })
         return True
+
+    def get_product_name_crop_sources(self):
+        self.ensure_one()
+        self.check_access("read")
+        from urllib.parse import urlencode
+        sources = []
+        bill = self.with_context(bin_size=True)
+        def add(record, field, name):
+            sources.append({
+                "key": "%s:%s" % (record._name, record.id),
+                "name": name,
+                "url": "/web/image/%s/%s/%s?%s" % (
+                    record._name, record.id, field,
+                    urlencode({"unique": str(record.write_date)})),
+            })
+        if bill.original_file and bill.original_is_image:
+            add(bill, "original_file", bill.original_file_name or _("First page"))
+        for page in bill.page_ids.sorted(lambda item: (item.sequence, item.id)):
+            if page.page_file and page.is_image:
+                add(page, "page_file", page.page_file_name or _("Bill page"))
+        return sources
+
+    def extract_cropped_product_name(self, image_data):
+        self.ensure_one()
+        self.check_access("read")
+        if not isinstance(image_data, str) or not image_data or len(image_data) > 14 * 1024 * 1024:
+            raise UserError(_("Use a cropped image smaller than 10 MB."))
+        try:
+            content = base64.b64decode(image_data, validate=True)
+        except (ValueError, TypeError) as error:
+            raise UserError(_("The cropped image is invalid.")) from error
+        if len(content) > 10 * 1024 * 1024:
+            raise UserError(_("Use a cropped image smaller than 10 MB."))
+        try:
+            return extract_product_name(content)
+        except LocalOCRError as error:
+            raise UserError(str(error)) from error
 
     def _apply_manual_crop(self, file_bytes, mimetype):
         self.ensure_one()

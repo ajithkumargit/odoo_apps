@@ -65,7 +65,7 @@
                     <field name="shop_import_line_ids" readonly="state not in ('draft', 'sent')">
                         <list editable="top" create="0" delete="0" class="o_shop_bill_lines_list">
                             <field name="sequence" widget="handle"/>
-                            <field name="raw_description" readonly="1"/>
+                            <field name="raw_description" widget="line_name_crop"/>
                             <field name="corrected_description" string="POS Product Name"/>
                             <field name="vendor_product_code" optional="hide"/>
                             <field name="barcode" optional="show"/>
