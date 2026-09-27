@@ -8,6 +8,12 @@
             <xpath expr="//form" position="inside">
                 <app data-string="Wholesale Shop" string="Wholesale Shop" name="wholesale_shop_pos"
                      groups="base.group_system">
+                    <block title="Product Photos" name="wholesale_product_photos">
+                        <setting id="shop_product_image_search" string="Google image results"
+                                 help="Optional: add your SerpAPI key to display up to five Google image thumbnails in the product photo popup. Without a key, open Google Images and upload your selected photo. Searches use your SerpAPI quota.">
+                            <field name="shop_serpapi_key" password="True" placeholder="Optional SerpAPI key"/>
+                        </setting>
+                    </block>
                     <block title="Local Supplier Bill Extraction" name="wholesale_bill_extraction">
                         <setting id="wholesale_local_ocr"
                                  string="Offline OCR enabled"

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="wholesale_shop_pos.ProductImageSearchField">
+        <div class="d-inline-flex flex-column align-items-center gap-1">
+            <t t-call="web.ImageField"/>
+            <button t-if="!props.readonly" type="button" class="btn btn-light btn-sm border"
+                    title="Search Google for a product photo" aria-label="Search product images" t-on-click.stop="openImageSearch">
+                <i class="fa fa-search"/>
+            </button>
+        </div>
+    </t>
+    <t t-name="wholesale_shop_pos.ProductImageSearchDialog">
+        <Dialog title="'Find Product Photo'" size="'lg'">
+            <form t-on-submit.prevent="search" class="d-flex gap-2 mb-3">
+                <input type="text" class="form-control" aria-label="Product image search"
+                       placeholder="Enter product name, brand and pack size" maxlength="200" t-model="state.query" t-att-disabled="state.busy"/>
+                <button type="submit" class="btn btn-primary" t-att-disabled="state.busy || !state.query.trim()">OK</button>
+            </form>
+            <p t-if="!state.automatic" class="text-muted">Press OK to open Google Images in a new tab. Download your chosen photo, then upload it here. Automatic results need an optional SerpAPI key in Settings → Wholesale Shop.</p>
+            <div class="d-flex gap-2 mb-3">
+                <FileUploader acceptedFileExtensions="'image/*'" onUploaded.bind="upload">
+                    <t t-set-slot="toggler">
+                        <button type="button" class="btn btn-secondary" t-att-disabled="state.busy"><i class="fa fa-upload me-1"/>Upload Chosen Photo</button>
+                    </t>
+                </FileUploader>
+                <button t-if="state.automatic" type="button" class="btn btn-link" t-on-click="openGoogle" t-att-disabled="!state.query.trim()">Open Google Images</button>
+            </div>
+            <div t-if="state.error" class="alert alert-warning" role="alert" t-esc="state.error"/>
+            <p t-if="state.busy" role="status"><i class="fa fa-spinner fa-spin me-2"/>Loading images...</p>
+            <div class="row g-2">
+                <div t-foreach="state.results" t-as="result" t-key="result.url" class="col-6 col-sm-4">
+                    <button type="button" class="btn btn-light border w-100 h-100 p-2" t-att-disabled="state.busy"
+                            t-att-title="result.title" t-att-aria-label="'Use image: ' + result.title" t-on-click="() => this.choose(result)">
+                        <img t-att-src="result.url" t-att-alt="result.title" referrerpolicy="no-referrer"
+                             style="width:100%;height:150px;object-fit:contain"/>
+                        <span class="d-block text-truncate mt-2" t-esc="result.title"/>
+                    </button>
+                </div>
+            </div>
+            <p t-if="state.searched &amp;&amp; !state.results.length" class="text-muted">No images found. Try a different product name.</p>
+            <p t-if="state.results.length" class="text-muted mt-3 mb-0">Select a photo to use it on this product, then save the product.</p>
+            <t t-set-slot="footer">
+                <button type="button" class="btn btn-secondary" t-on-click="props.close">Cancel</button>
+            </t>
+        </Dialog>
+    </t>
+</templates>

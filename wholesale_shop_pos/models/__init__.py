@@ -11,3 +11,4 @@ from . import purchase_order
 from . import product_price_audit
 
 from . import user_menu_access
+from . import product_image_search

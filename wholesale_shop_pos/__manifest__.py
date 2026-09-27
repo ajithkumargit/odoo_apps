@@ -1,7 +1,7 @@
 {
     "name": "Wholesale Shop POS Core",
     "summary": "Wholesale/retail POS support, purchase bill staging, vendor product mapping and price history",
-    "version": "19.0.1.24.0",
+    "version": "19.0.1.25.0",
     "category": "Sales/Point of Sale",
     "author": "Custom",
     "license": "LGPL-3",
@@ -43,6 +43,8 @@
             "wholesale_shop_pos/static/src/xml/pos_barcode_camera.xml",
         ],
         "web.assets_backend": [
+            "wholesale_shop_pos/static/src/js/product_image_search.js",
+            "wholesale_shop_pos/static/src/xml/product_image_search.xml",
             "wholesale_shop_pos/static/src/js/line_name_crop.js",
             "wholesale_shop_pos/static/src/xml/line_name_crop.xml",
             "wholesale_shop_pos/static/src/js/product_barcode_field.js",

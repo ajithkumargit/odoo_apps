@@ -4,7 +4,7 @@
         <div class="d-flex align-items-center gap-1">
             <t t-call="web.CharField"/>
             <button t-if="canCrop" type="button" class="btn btn-link p-1 text-nowrap" title="Crop photo to extract this product name"
-                    aria-label="Crop Product Name" t-on-click.stop="crop"><i class="fa fa-crop"/> Crop Name</button>
+                    aria-label="Crop Product Name" t-on-click.stop="crop"><i class="fa fa-crop"/></button>
         </div>
     </t>
     <t t-name="wholesale_shop_pos.LineNameCropDialog">
