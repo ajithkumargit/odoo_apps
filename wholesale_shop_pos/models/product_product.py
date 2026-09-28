@@ -276,7 +276,7 @@ class ProductProduct(models.Model):
         help="Optional barcode used when scanning a full box/carton in the POS.",
     )
     shop_box_qty = fields.Float(
-        string="Box Quantity",
+        string="Box Qty",
         default=1.0,
         help="How many base units are contained in one scanned box/carton.",
     )

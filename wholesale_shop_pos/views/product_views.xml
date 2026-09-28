@@ -30,6 +30,10 @@
             </xpath>
             <xpath expr="//div[@name='standard_price_uom']" position="after">
                 <field name="shop_mrp" invisible="product_variant_count &gt; 1"/>
+                <field name="shop_box_price" invisible="product_variant_count &gt; 1"/>
+                <field name="shop_box_qty" invisible="product_variant_count &gt; 1"/>
+                <field name="shop_single_pack_price" invisible="product_variant_count &gt; 1"/>
+                <field name="shop_single_pack_qty" invisible="product_variant_count &gt; 1"/>
                 <field name="shop_profit_percent" invisible="product_variant_count &gt; 1"/>
                 <field name="shop_price_check" invisible="product_variant_count &gt; 1"/>
                 <label for="shop_price_check_profit_percent"
@@ -71,7 +75,10 @@
                                 invisible="not shop_variant_price_check"/>
                     </div>
                     <field name="shop_box_barcode" widget="shop_barcode_scan"/>
+                    <field name="shop_box_price"/>
                     <field name="shop_box_qty"/>
+                    <field name="shop_single_pack_price"/>
+                    <field name="shop_single_pack_qty"/>
                     <field name="shop_low_stock_qty"/>
                 </group>
             </xpath>
@@ -84,6 +91,10 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='list_price']" position="after">
                 <field name="shop_mrp" optional="show" readonly="product_variant_count != 1"/>
+                <field name="shop_box_price" optional="hide" readonly="product_variant_count != 1"/>
+                <field name="shop_box_qty" optional="hide" readonly="product_variant_count != 1"/>
+                <field name="shop_single_pack_price" optional="hide" readonly="product_variant_count != 1"/>
+                <field name="shop_single_pack_qty" optional="hide" readonly="product_variant_count != 1"/>
             </xpath>
         </field>
     </record>
@@ -95,6 +106,10 @@
             <xpath expr="//field[@name='lst_price']" position="after">
                 <field name="currency_id" column_invisible="True"/>
                 <field name="shop_mrp" optional="show"/>
+                <field name="shop_box_price" optional="hide"/>
+                <field name="shop_box_qty" optional="hide"/>
+                <field name="shop_single_pack_price" optional="hide"/>
+                <field name="shop_single_pack_qty" optional="hide"/>
             </xpath>
         </field>
     </record>
@@ -105,6 +120,10 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='barcode']" position="after">
                 <field name="shop_mrp"/>
+                <field name="shop_box_price"/>
+                <field name="shop_box_qty"/>
+                <field name="shop_single_pack_price"/>
+                <field name="shop_single_pack_qty"/>
             </xpath>
         </field>
     </record>
