@@ -13,15 +13,16 @@ class TestProductPriceAudit(TransactionCase):
     def changes(self):
         return self.History.search([('id', '>', self.cutoff), ('product_id', '=', self.product.id)])
 
-    def test_cost_and_automatic_sale_recorded_once(self):
+    def test_cost_only_change_does_not_reprice_variant(self):
         self.product.shop_variant_profit_percent = 50
         self.cutoff = self.History.search([], order='id desc', limit=1).id
         self.product.standard_price = 12
         rows = self.changes()
-        self.assertEqual(len(rows), 2)
+        self.assertEqual(len(rows), 1)
         self.assertEqual(rows.filtered(lambda r: r.price_type == 'cost').previous_price, 10)
         self.assertEqual(rows.filtered(lambda r: r.price_type == 'cost').unit_price, 12)
-        self.assertEqual(rows.filtered(lambda r: r.price_type == 'sale').unit_price, 18)
+        self.assertFalse(rows.filtered(lambda r: r.price_type == 'sale'))
+        self.assertEqual(self.product.lst_price, 15)
 
     def test_template_sale_and_cost_inverse(self):
         self.product.product_tmpl_id.write({'standard_price': 15, 'list_price': 25})
@@ -39,8 +40,9 @@ class TestProductPriceAudit(TransactionCase):
         self.cutoff = self.History.search([], order='id desc', limit=1).id
         self.product.standard_price = 20
         rows = self.changes()
-        self.assertEqual(len(rows), 2)
-        self.assertEqual(rows.filtered(lambda r: r.price_type == 'sale').unit_price, 24)
+        self.assertEqual(len(rows), 1)
+        self.assertFalse(rows.filtered(lambda r: r.price_type == 'sale'))
+        self.assertEqual(self.product.lst_price, 12)
 
     def test_variant_extra_price(self):
         attribute = self.env['product.attribute'].create({'name': 'Audit size'})

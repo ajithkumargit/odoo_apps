@@ -2,7 +2,7 @@ from odoo.tests.common import TransactionCase
 
 
 class TestProductPosCategorySync(TransactionCase):
-    def test_profit_percentage_updates_sales_price_and_tracks_cost(self):
+    def test_profit_percentage_only_updates_sales_price_when_changed(self):
         template = self.env["product.template"].create({
             "name": "Profit Priced Product",
             "standard_price": 100.0,
@@ -10,11 +10,11 @@ class TestProductPosCategorySync(TransactionCase):
             "shop_profit_percent": 20.0,
         })
 
-        self.assertAlmostEqual(template.list_price, 120.0, places=2)
+        self.assertAlmostEqual(template.list_price, 150.0, places=2)
 
         variant = template.product_variant_id.with_company(self.env.company)
         variant.standard_price = 80.0
-        self.assertAlmostEqual(template.list_price, 96.0, places=2)
+        self.assertAlmostEqual(template.list_price, 150.0, places=2)
 
         template.shop_profit_percent = 25.0
         self.assertAlmostEqual(template.list_price, 100.0, places=2)

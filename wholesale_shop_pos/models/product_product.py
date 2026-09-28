@@ -156,10 +156,10 @@ class ProductTemplate(models.Model):
     )
     shop_profit_percent = fields.Float(
         string="Profit %",
-        digits=(16, 2),
+        digits=(16, 6),
         default=0.0,
         help=(
-            "When greater than zero, Sales Price is kept equal to Cost plus "
+            "Changing this percentage sets Sales Price to Cost plus "
             "this percentage. For example, a cost of 100 and profit of 20% "
             "sets the sales price to 120."
         ),
@@ -171,7 +171,7 @@ class ProductTemplate(models.Model):
     )
     shop_price_check_profit_percent = fields.Float(
         string="Template Profit % at Checked Price",
-        digits=(16, 2),
+        digits=(16, 6),
         compute="_compute_shop_price_check_profit_percent",
         help="Profit percentage of Price to Check compared with Cost.",
     )
@@ -203,8 +203,7 @@ class ProductTemplate(models.Model):
     def _apply_shop_profit_price(self):
         """Synchronize the template sales price from its company cost."""
         for product in self.filtered(
-            lambda item: item.shop_profit_percent > 0
-            and item.product_variant_count <= 1
+            lambda item: item.product_variant_count <= 1
         ):
             cost = product.with_company(self.env.company).standard_price
             sales_price = self.env.company.currency_id.round(
@@ -215,10 +214,10 @@ class ProductTemplate(models.Model):
                     "list_price": sales_price,
                 })
 
-    @api.onchange("shop_profit_percent", "standard_price")
+    @api.onchange("shop_profit_percent")
     def _onchange_shop_profit_percent(self):
         for product in self:
-            if product.shop_profit_percent > 0:
+            if product.product_variant_count <= 1:
                 product.list_price = product.standard_price * (
                     1.0 + product.shop_profit_percent / 100.0
                 )
@@ -249,10 +248,13 @@ class ProductTemplate(models.Model):
             for product, values in zip(products, vals_list):
                 source = "pos" if values.get("pos_categ_ids") else "product"
                 product._sync_shop_product_pos_category(source=source)
-        products.filtered(lambda product: product.shop_profit_percent > 0)._apply_shop_profit_price()
+        for product, values in zip(products, vals_list):
+            if "shop_profit_percent" in values and "list_price" not in values:
+                product._apply_shop_profit_price()
         return products
 
     def write(self, vals):
+        changed_profit = self.filtered(lambda p: "shop_profit_percent" in vals and p.shop_profit_percent != vals["shop_profit_percent"])
         result = super().write(vals)
         if not self.env.context.get("shop_product_pos_sync"):
             if "categ_id" in vals:
@@ -261,9 +263,9 @@ class ProductTemplate(models.Model):
                 self._sync_shop_product_pos_category(source="pos")
         if (
             not self.env.context.get("shop_profit_price_sync")
-            and {"shop_profit_percent", "standard_price"}.intersection(vals)
+            and "list_price" not in vals and changed_profit
         ):
-            self._apply_shop_profit_price()
+            changed_profit._apply_shop_profit_price()
         return result
 
 
@@ -287,18 +289,19 @@ class ProductProduct(models.Model):
     )
     shop_variant_profit_percent = fields.Float(
         string="Variant Profit %",
-        digits=(16, 2),
+        digits=(16, 6),
         default=0.0,
         help=(
-            "Variant-specific profit percentage. When set, this variant's "
-            "Sales Price and POS base price are calculated from its own cost."
+            "Changing this percentage calculates the variant Sales Price once from its cost. "
+            "Direct sales-price edits are preserved until the percentage changes again."
         ),
     )
     shop_variant_sale_price = fields.Monetary(
-        string="Calculated Variant Sales Price",
+        string="Variant Sales Price",
         currency_field="currency_id",
         compute="_compute_shop_variant_sale_price",
-        help="Cost plus Variant Profit %. This is the price used by the POS when enabled.",
+        inverse="_inverse_shop_variant_sale_price",
+        help="Editable variant price. Cost changes do not overwrite a manually set price.",
     )
     shop_variant_price_check = fields.Monetary(
         string="Variant Price to Check",
@@ -310,7 +313,7 @@ class ProductProduct(models.Model):
     )
     shop_variant_price_check_profit_percent = fields.Float(
         string="Variant Profit % at Checked Price",
-        digits=(16, 2),
+        digits=(16, 6),
         compute="_compute_shop_variant_price_check_profit_percent",
     )
 
@@ -340,11 +343,13 @@ class ProductProduct(models.Model):
             if product.shop_variant_profit_percent < 0:
                 raise ValidationError(_("Variant profit percentage cannot be negative."))
 
-    @api.depends("standard_price", "shop_variant_profit_percent", "list_price", "price_extra")
+    @api.depends("standard_price", "shop_variant_profit_percent", "list_price", "price_extra", "shop_fixed_sale_price", "shop_sale_price_fixed")
     @api.depends_context("company")
     def _compute_shop_variant_sale_price(self):
         for product in self:
-            if product.shop_variant_profit_percent > 0:
+            if product.shop_sale_price_fixed:
+                product.shop_variant_sale_price = product.shop_fixed_sale_price
+            elif product.shop_variant_profit_percent > 0:
                 product.shop_variant_sale_price = product.currency_id.round(
                     product.standard_price
                     * (1.0 + product.shop_variant_profit_percent / 100.0)
@@ -353,12 +358,12 @@ class ProductProduct(models.Model):
                 product.shop_variant_sale_price = product.list_price + product.price_extra
 
     @api.depends(
-        "list_price", "price_extra", "standard_price", "shop_variant_profit_percent"
+        "list_price", "price_extra", "standard_price", "shop_variant_profit_percent", "shop_fixed_sale_price", "shop_sale_price_fixed"
     )
     @api.depends_context("uom")
     def _compute_product_lst_price(self):
         super()._compute_product_lst_price()
-        for product in self.filtered(lambda item: item.shop_variant_profit_percent > 0):
+        for product in self.filtered(lambda item: item.shop_sale_price_fixed or item.shop_variant_profit_percent > 0):
             price = product.shop_variant_sale_price
             if self.env.context.get("uom"):
                 target_uom = self.env["uom.uom"].browse(self.env.context["uom"])
@@ -374,7 +379,7 @@ class ProductProduct(models.Model):
         company = company or self.env.company
         date = date or fields.Date.context_today(self)
         for product in self.with_company(company).filtered(
-            lambda item: item.shop_variant_profit_percent > 0
+            lambda item: item.shop_sale_price_fixed or item.shop_variant_profit_percent > 0
         ):
             price = product.shop_variant_sale_price
             if uom:
@@ -385,14 +390,3 @@ class ProductProduct(models.Model):
                 )
             prices[product.id] = price
         return prices
-
-    def write(self, vals):
-        result = super().write(vals)
-        if (
-            "standard_price" in vals
-            and not self.env.context.get("shop_profit_price_sync")
-        ):
-            self.filtered(
-                lambda product: product.product_tmpl_id.product_variant_count <= 1
-            ).mapped("product_tmpl_id")._apply_shop_profit_price()
-        return result

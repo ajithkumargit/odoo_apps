@@ -63,7 +63,7 @@
                     <field name="shop_hsn_code"/>
                     <field name="shop_mrp"/>
                     <field name="shop_variant_profit_percent"/>
-                    <field name="shop_variant_sale_price" readonly="1"/>
+                    <field name="shop_variant_sale_price"/>
                     <field name="shop_variant_price_check"/>
                     <label for="shop_variant_price_check_profit_percent"/>
                     <div class="o_row">
