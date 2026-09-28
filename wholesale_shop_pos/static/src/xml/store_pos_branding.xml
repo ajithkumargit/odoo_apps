@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="wholesale_shop_pos.StoreReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('footer-powered-by')]" position="replace"/>
+    </t>
+    <t t-name="wholesale_shop_pos.StoreLogo" t-inherit="point_of_sale.OdooLogo" t-inherit-mode="extension">
+        <xpath expr="//*[local-name()='svg']" position="replace">
+            <img src="/wholesale_shop_pos/static/src/img/store.svg" alt="Wholesale Shop" style="width:100%;max-height:96px"/>
+        </xpath>
+    </t>
+</templates>

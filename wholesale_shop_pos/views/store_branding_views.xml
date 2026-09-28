@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="store_layout" inherit_id="web.layout" priority="90">
+        <xpath expr="//title" position="replace"><title t-esc="title if title and title != 'Odoo' else 'Wholesale Shop'"/></xpath>
+        <xpath expr="//link[@rel='shortcut icon']" position="replace">
+            <link rel="icon" type="image/svg+xml" href="/wholesale_shop_pos/static/src/img/store.svg"/>
+        </xpath>
+    </template>
+    <template id="store_no_install" inherit_id="web.webclient_bootstrap" priority="90">
+        <xpath expr="//link[@rel='manifest']" position="replace"/>
+        <xpath expr="//link[@rel='apple-touch-icon']" position="attributes">
+            <attribute name="href">/wholesale_shop_pos/static/src/img/store.svg</attribute>
+        </xpath>
+    </template>
+    <template id="store_no_scoped_install" inherit_id="web.webclient_scoped_app" priority="90">
+        <xpath expr="//link[@rel='manifest']" position="replace"/>
+    </template>
+    <template id="store_login_footer" inherit_id="web.login_layout" priority="90">
+        <xpath expr="//a[contains(@href, 'odoo.com')]" position="replace"/>
+    </template>
+    <template id="store_no_promotion" inherit_id="web.brand_promotion" priority="90">
+        <xpath expr="//div[hasclass('o_brand_promotion')]" position="replace"/>
+    </template>
+    <template id="store_offline" inherit_id="web.webclient_offline" priority="90">
+        <xpath expr="//div[@class='card']/img" position="replace">
+            <img src="/wholesale_shop_pos/static/src/img/store.svg" alt="Wholesale Shop"/>
+        </xpath>
+        <xpath expr="//div[@class='card']/p" position="replace">
+            <p>Check your connection. Your store will load when you are back online.</p>
+        </xpath>
+    </template>
+    <template id="store_pos_title" inherit_id="point_of_sale.index" priority="90">
+        <xpath expr="//title" position="replace"><title>Wholesale Shop POS</title></xpath>
+        <xpath expr="//link[@rel='icon']" position="attributes">
+            <attribute name="href">/wholesale_shop_pos/static/src/img/store.svg</attribute>
+            <attribute name="type">image/svg+xml</attribute>
+        </xpath>
+    </template>
+</odoo>
