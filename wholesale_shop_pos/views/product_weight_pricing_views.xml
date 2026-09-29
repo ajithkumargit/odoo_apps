@@ -10,8 +10,10 @@
                     <field name="shop_price_by_weight"/>
                     <field name="shop_weight_attribute_id" required="shop_price_by_weight"
                            domain="[('create_variant', '!=', 'no_variant')]" options="{'no_create': True}"/>
-                    <button name="action_load_shop_weight_options" type="object" string="Load Configured Weights"
-                            class="btn-secondary" invisible="not shop_weight_attribute_id"/>
+                    <div colspan="2" invisible="not shop_weight_attribute_id">
+                        <button name="action_load_shop_weight_options" type="object" string="Load Configured Weights"
+                                class="btn-secondary"/>
+                    </div>
                     <field name="shop_cost_per_kg" invisible="not shop_price_by_weight"/>
                     <field name="shop_sale_price_per_kg" invisible="not shop_price_by_weight"/>
                     <div colspan="2" class="text-muted" invisible="not shop_price_by_weight">
@@ -45,7 +47,15 @@
             <xpath expr="//field[@name='shop_mrp']" position="before">
                 <field name="shop_variant_weight_grams" invisible="not shop_price_by_weight"/>
             </xpath>
-            <xpath expr="//field[@name='shop_variant_sale_price']" position="attributes"><attribute name="readonly">shop_price_by_weight</attribute></xpath>
+            <xpath expr="//group[@name='group_standard_price']" position="after">
+                <group string="Selected Weight Amounts" invisible="not shop_price_by_weight">
+                    <field name="shop_variant_weight_grams" string="Selected Weight (g)"/>
+                    <field name="shop_weight_sale_amount"/>
+                    <field name="shop_weight_cost_amount"/>
+                    <div colspan="2" class="text-muted">These amounts are for the selected weight. The unit prices above remain per kg for loose-weight products.</div>
+                </group>
+            </xpath>
+            <xpath expr="//field[@name='shop_variant_sale_price']" position="attributes"><attribute name="readonly">shop_price_by_weight</attribute><attribute name="invisible">shop_price_by_weight</attribute></xpath>
             <xpath expr="//field[@name='lst_price']" position="attributes"><attribute name="readonly">shop_price_by_weight</attribute></xpath>
             <xpath expr="//field[@name='standard_price']" position="attributes"><attribute name="readonly">shop_price_by_weight</attribute></xpath>
             <xpath expr="//field[@name='shop_variant_profit_percent']" position="attributes"><attribute name="invisible">shop_price_by_weight</attribute></xpath>
@@ -73,6 +83,8 @@
             <xpath expr="//field[@name='lst_price']" position="before">
                 <field name="shop_price_by_weight" column_invisible="True"/>
                 <field name="shop_variant_weight_grams" optional="hide"/>
+                <field name="shop_weight_sale_amount" optional="show" invisible="not shop_price_by_weight"/>
+                <field name="shop_weight_cost_amount" optional="show" invisible="not shop_price_by_weight"/>
             </xpath>
             <xpath expr="//field[@name='lst_price']" position="attributes"><attribute name="readonly">shop_price_by_weight</attribute></xpath>
             <xpath expr="//field[@name='standard_price']" position="attributes"><attribute name="readonly">shop_price_by_weight</attribute></xpath>
@@ -94,6 +106,8 @@
             </xpath>
             <xpath expr="//field[@name='standard_price']/.." position="after">
                 <field name="shop_variant_weight_grams" invisible="not shop_price_by_weight"/>
+                <field name="shop_weight_sale_amount" invisible="not shop_price_by_weight"/>
+                <field name="shop_weight_cost_amount" invisible="not shop_price_by_weight"/>
                 <field name="shop_cost_per_kg" invisible="not shop_price_by_weight"/>
                 <field name="shop_sale_price_per_kg" invisible="not shop_price_by_weight"/>
             </xpath>

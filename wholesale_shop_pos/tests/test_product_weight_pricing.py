@@ -88,8 +88,11 @@ class TestProductWeightPricing(TransactionCase):
         for variant in self.template.product_variant_ids:
             self.assertEqual(variant.standard_price, 51)
             self.assertEqual(variant.lst_price, 56)
-            self.assertAlmostEqual(variant.lst_price * variant.shop_variant_weight_grams / 1000,
-                                   56 * variant.shop_variant_weight_grams / 1000)
+            self.assertAlmostEqual(variant.shop_weight_sale_amount, 56 * variant.shop_variant_weight_grams / 1000)
+            self.assertAlmostEqual(variant.shop_weight_cost_amount, 51 * variant.shop_variant_weight_grams / 1000)
+        self.template.shop_sale_price_per_kg = 60
+        for variant in self.template.product_variant_ids:
+            self.assertAlmostEqual(variant.shop_weight_sale_amount, 60 * variant.shop_variant_weight_grams / 1000)
 
     def test_adding_weights_preserves_original_cost_in_same_uom(self):
         product = self.env['product.template'].create({

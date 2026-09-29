@@ -196,6 +196,20 @@ class ProductProduct(models.Model):
     _inherit = 'product.product'
 
     shop_loose_weight = fields.Boolean(compute='_compute_shop_loose_weight')
+    shop_weight_sale_amount = fields.Monetary(
+        string='Sales Amount for Selected Weight', compute='_compute_shop_weight_amounts',
+        currency_field='currency_id', help='Amount for this weight at the current unit price, before tax calculation.')
+    shop_weight_cost_amount = fields.Monetary(
+        string='Cost for Selected Weight', compute='_compute_shop_weight_amounts', currency_field='cost_currency_id')
+
+    @api.depends('shop_loose_weight', 'shop_price_by_weight', 'shop_variant_weight_grams',
+                 'shop_variant_sale_price', 'standard_price')
+    @api.depends_context('company')
+    def _compute_shop_weight_amounts(self):
+        for product in self:
+            ratio = product.shop_variant_weight_grams / 1000 if product.shop_loose_weight else 1
+            product.shop_weight_sale_amount = product.shop_variant_sale_price * ratio if product.shop_price_by_weight else 0
+            product.shop_weight_cost_amount = product.standard_price * ratio if product.shop_price_by_weight else 0
 
     @api.depends('shop_price_by_weight', 'uom_id')
     def _compute_shop_loose_weight(self):
