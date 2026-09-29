@@ -1,7 +1,33 @@
 import re
+import math
 
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
+
+
+WEIGHT_OPTIONS_PARAM = 'wholesale_shop_pos.weight_options'
+DEFAULT_WEIGHT_OPTIONS = '100g,200g,250g,500g,750g,1kg'
+
+
+def configured_weight_names(value):
+    names = list(dict.fromkeys(part.strip() for part in value.split(',') if part.strip()))
+    if not names or any(not math.isfinite(grams_from_name(name)) or grams_from_name(name) <= 0 for name in names):
+        raise ValidationError(_('Enter comma-separated positive weights with units, for example: 100g,200g,500g,750g,1kg.'))
+    return names
+
+
+class ResConfigSettings(models.TransientModel):
+    _inherit = 'res.config.settings'
+
+    shop_weight_options = fields.Char(
+        string='Default Weight Options', config_parameter=WEIGHT_OPTIONS_PARAM,
+        default=DEFAULT_WEIGHT_OPTIONS,
+    )
+
+    @api.constrains('shop_weight_options')
+    def _check_weight_options(self):
+        for settings in self:
+            configured_weight_names(settings.shop_weight_options or DEFAULT_WEIGHT_OPTIONS)
 
 
 def grams_from_name(name):
@@ -46,6 +72,36 @@ class ProductTemplate(models.Model):
         help='Select the variant attribute containing weights such as 100g, 250g, 500g and 1kg.')
     shop_cost_per_kg = fields.Float(string='Cost / kg', digits='Product Price', company_dependent=True)
     shop_sale_price_per_kg = fields.Float(string='Sales Price / kg', related='list_price', readonly=False, digits='Product Price')
+
+    def action_load_shop_weight_options(self):
+        self.ensure_one()
+        names = configured_weight_names(self.env['ir.config_parameter'].sudo().get_param(
+            WEIGHT_OPTIONS_PARAM, DEFAULT_WEIGHT_OPTIONS,
+        ) or DEFAULT_WEIGHT_OPTIONS)
+        attribute = self.shop_weight_attribute_id or self._guess_shop_weight_attribute()
+        if not attribute:
+            raise ValidationError(_('Select a Weight Attribute first, then load the configured weights.'))
+        if attribute.create_variant == 'no_variant':
+            raise ValidationError(_('The Weight Attribute must create product variants.'))
+        values = self.env['product.attribute.value']
+        for name in names:
+            value = values.with_context(lang='en_US').search([
+                ('attribute_id', '=', attribute.id), ('name', '=', name),
+            ], limit=1)
+            if not value:
+                value = values.search([
+                    ('attribute_id', '=', attribute.id),
+                    ('shop_weight_grams', '=', grams_from_name(name)),
+                ], limit=1)
+            if not value:
+                value = values.create({'attribute_id': attribute.id, 'name': name})
+            values |= value
+        line = self.attribute_line_ids.filtered(lambda item: item.attribute_id == attribute)
+        commands = [(1, line.id, {'value_ids': [(4, value.id) for value in values]})] if line else [
+            (0, 0, {'attribute_id': attribute.id, 'value_ids': [(6, 0, values.ids)]})
+        ]
+        self.write({'shop_weight_attribute_id': attribute.id, 'attribute_line_ids': commands})
+        return True
 
     def _guess_shop_weight_attribute(self):
         self.ensure_one()
@@ -124,6 +180,10 @@ class ProductTemplate(models.Model):
 
 class ProductProduct(models.Model):
     _inherit = 'product.product'
+
+    def action_load_shop_weight_options(self):
+        self.ensure_one()
+        return self.product_tmpl_id.action_load_shop_weight_options()
 
     shop_variant_weight_grams = fields.Float(string='Pack Weight (g)', compute='_compute_variant_weight', store=True)
 

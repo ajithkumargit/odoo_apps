@@ -14,6 +14,12 @@
                             <field name="shop_serpapi_key" password="True" placeholder="Optional SerpAPI key"/>
                         </setting>
                     </block>
+                    <block title="Weight Pricing" name="wholesale_weight_pricing">
+                        <setting id="shop_weight_options" string="Default weight options"
+                                 help="Comma-separated weights used by Load Configured Weights on products. Existing variants are preserved. Any positive gram or kilogram weight is supported.">
+                            <field name="shop_weight_options" placeholder="100g,200g,250g,500g,750g,1kg"/>
+                        </setting>
+                    </block>
                     <block title="Local Supplier Bill Extraction" name="wholesale_bill_extraction">
                         <setting id="wholesale_local_ocr"
                                  string="Offline OCR enabled"

@@ -8,8 +8,10 @@
             <xpath expr="//group[@name='group_standard_price']" position="after">
                 <group string="Weight Pricing" name="shop_weight_pricing">
                     <field name="shop_price_by_weight"/>
-                    <field name="shop_weight_attribute_id" invisible="not shop_price_by_weight" required="shop_price_by_weight"
+                    <field name="shop_weight_attribute_id" required="shop_price_by_weight"
                            domain="[('create_variant', '!=', 'no_variant')]" options="{'no_create': True}"/>
+                    <button name="action_load_shop_weight_options" type="object" string="Load Configured Weights"
+                            class="btn-secondary" invisible="not shop_weight_attribute_id"/>
                     <field name="shop_cost_per_kg" invisible="not shop_price_by_weight"/>
                     <field name="shop_sale_price_per_kg" invisible="not shop_price_by_weight"/>
                     <div colspan="2" class="text-muted" invisible="not shop_price_by_weight">

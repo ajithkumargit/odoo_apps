@@ -75,3 +75,19 @@ class TestProductWeightPricing(TransactionCase):
     def test_weight_names(self):
         for name, expected in [('250 gm', 250), ('0.5 kg', 500), ('125g', 125), ('Large', 0)]:
             self.assertEqual(grams_from_name(name), expected)
+
+    def test_configured_weights_are_dynamic_and_additive(self):
+        params = self.env['ir.config_parameter'].sudo()
+        params.set_param('wholesale_shop_pos.weight_options', '100g,200g,500g,750g,125g')
+        self.template.action_load_shop_weight_options()
+        self.assertEqual(len(self.template.product_variant_ids), 7)
+        self.assert_prices(80, 120)
+        self.template.action_load_shop_weight_options()
+        self.assertEqual(len(self.template.product_variant_ids), 7)
+        params.set_param('wholesale_shop_pos.weight_options', '625g')
+        self.template.product_variant_ids[0].action_load_shop_weight_options()
+        self.assertEqual(len(self.template.product_variant_ids), 8)
+        self.assert_prices(80, 120)
+        params.set_param('wholesale_shop_pos.weight_options', 'wrong,0g')
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            self.template.action_load_shop_weight_options()
