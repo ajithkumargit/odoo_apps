@@ -32,6 +32,18 @@
         <field name="model">product.template</field>
         <field name="inherit_id" ref="wholesale_shop_pos.view_product_template_form_profit_wholesale_shop"/>
         <field name="arch" type="xml">
+            <xpath expr="//label[@for='standard_price']" position="attributes">
+                <attribute name="invisible">type == 'combo' or (not shop_price_by_weight and (product_variant_count &gt; 1 or (product_variant_count == 0 and is_dynamically_created)))</attribute>
+            </xpath>
+            <xpath expr="//div[@name='standard_price_uom']" position="attributes">
+                <attribute name="invisible">type == 'combo' or (not shop_price_by_weight and (product_variant_count &gt; 1 or (product_variant_count == 0 and is_dynamically_created)))</attribute>
+            </xpath>
+            <xpath expr="//div[@name='standard_price_uom']/span" position="attributes">
+                <attribute name="invisible">shop_price_by_weight</attribute>
+            </xpath>
+            <xpath expr="//div[@name='standard_price_uom']/span" position="after">
+                <span invisible="not shop_price_by_weight">per kg</span>
+            </xpath>
             <xpath expr="//field[@name='shop_profit_percent']" position="attributes">
                 <attribute name="invisible">product_variant_count &gt; 1 and not shop_price_by_weight</attribute>
             </xpath>
