@@ -66,8 +66,8 @@ class TestProductWeightPricing(TransactionCase):
     def test_validation_and_disable(self):
         with self.assertRaises(ValidationError), self.env.cr.savepoint():
             self.weights[0].shop_weight_grams = 0
-        with self.assertRaises(ValidationError), self.env.cr.savepoint():
-            self.template.product_variant_ids[0].lst_price = 23
+        self.template.product_variant_ids[0].lst_price = 23
+        self.assertEqual(self.template.product_variant_ids[0].lst_price, 23)
         self.template.shop_price_by_weight = False
         self.template.product_variant_ids[0].lst_price = 23
         self.assertEqual(self.template.product_variant_ids[0].lst_price, 23)
@@ -75,6 +75,74 @@ class TestProductWeightPricing(TransactionCase):
     def test_weight_names(self):
         for name, expected in [('250 gm', 250), ('0.5 kg', 500), ('125g', 125), ('Large', 0)]:
             self.assertEqual(grams_from_name(name), expected)
+
+    def test_edit_cost_and_sale_fields_without_readonly_guards(self):
+        self.template.uom_id = self.env.ref('uom.product_uom_kgm')
+        variant = self.template.product_variant_ids.filtered(lambda p: p.shop_variant_weight_grams == 250)
+        self.template.standard_price = 51
+        self.assertEqual(self.template.standard_price, 51)
+        variant.standard_price = 52
+        self.assertEqual(self.template.shop_cost_per_kg, 52)
+        variant.shop_weight_cost_amount = 12.75
+        self.assertEqual(self.template.shop_cost_per_kg, 51)
+        variant.lst_price = 56
+        self.assertEqual(variant.shop_weight_sale_amount, 14)
+        variant.shop_variant_sale_price = 60
+        self.assertEqual(variant.shop_weight_sale_amount, 15)
+        variant.write({'shop_variant_profit_percent': 30, 'lst_price': 64})
+        self.assertEqual(variant.lst_price, 64)
+        self.template.shop_cost_per_kg = 55
+        self.assertEqual(variant.lst_price, 64)
+
+    def test_restore_kg_cost_from_bill_for_original_archived_variant(self):
+        template = self.env['product.template'].create({
+            'name': 'Bulk sugar', 'uom_id': self.env.ref('uom.product_uom_kgm').id,
+            'standard_price': 51, 'list_price': 56,
+        })
+        original = template.product_variant_id
+        vendor = self.env['res.partner'].create({'name': 'Weight supplier'})
+        order = self.env['purchase.order'].create({'partner_id': vendor.id})
+        bill = self.env['shop.purchase.import'].create({
+            'vendor_id': vendor.id, 'state': 'po_created', 'purchase_order_id': order.id,
+        })
+        line = self.env['shop.purchase.import.line'].create({
+            'import_id': bill.id, 'product_id': original.id, 'quantity': 3,
+            'raw_description': 'Sugar 50kg bag',
+            'purchase_rate': 2550, 'units_per_purchase_qty': 50,
+        })
+        template.write({'attribute_line_ids': [Command.create({
+            'attribute_id': self.attribute.id, 'value_ids': [Command.set(self.weights.ids)],
+        })]})
+        template.write({'shop_price_by_weight': True})
+        self.assertEqual(template.shop_cost_per_kg, 51)
+        for variant in template.product_variant_ids:
+            self.assertEqual(variant.standard_price, 51)
+        template.shop_cost_per_kg = 60
+        template.action_update_cost_from_bill()
+        self.assertEqual(template.shop_cost_per_kg, 51)
+        self.assertEqual(template.list_price, 56)
+        line.purchase_rate = 0
+        line._sync_product_cost(original)
+        self.assertEqual(template.shop_cost_per_kg, 51)
+
+    def test_pack_restore_uses_its_own_bill_line(self):
+        vendor = self.env['res.partner'].create({'name': 'Pack supplier'})
+        order = self.env['purchase.order'].create({'partner_id': vendor.id})
+        bill = self.env['shop.purchase.import'].create({
+            'vendor_id': vendor.id, 'state': 'po_created', 'purchase_order_id': order.id,
+        })
+        pack = self.template.product_variant_ids.filtered(lambda p: p.shop_variant_weight_grams == 250)
+        other = self.template.product_variant_ids.filtered(lambda p: p.shop_variant_weight_grams == 500)
+        self.env['shop.purchase.import.line'].create([
+            {'import_id': bill.id, 'raw_description': '250g pack', 'product_id': pack.id,
+             'quantity': 1, 'purchase_rate': 20},
+            {'import_id': bill.id, 'raw_description': '500g pack', 'product_id': other.id,
+             'quantity': 1, 'purchase_rate': 60},
+        ])
+        self.template.shop_cost_per_kg = 100
+        pack.action_update_cost_from_bill()
+        self.assertEqual(pack.standard_price, 20)
+        self.assertEqual(self.template.shop_cost_per_kg, 80)
 
     def test_weight_price_and_profit_controls(self):
         self.template.uom_id = self.env.ref('uom.product_uom_kgm')

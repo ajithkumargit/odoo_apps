@@ -73,6 +73,43 @@ class ProductTemplate(models.Model):
     shop_cost_per_kg = fields.Float(string='Cost / kg', digits='Product Price', company_dependent=True)
     shop_sale_price_per_kg = fields.Float(string='Sales Price / kg', related='list_price', readonly=False, digits='Product Price')
 
+    @api.depends_context('company')
+    @api.depends('product_variant_ids.standard_price', 'shop_price_by_weight', 'shop_cost_per_kg')
+    def _compute_standard_price(self):
+        super()._compute_standard_price()
+        for template in self.filtered('shop_price_by_weight'):
+            template.standard_price = template.shop_cost_per_kg
+
+    def _latest_shop_cost_bill_line(self, product=False):
+        self.ensure_one()
+        # Include the original archived variant: it still owns historical bills.
+        domain = [
+            ('product_id.product_tmpl_id', '=', self.id),
+            ('company_id', '=', self.env.company.id),
+            ('import_id.state', '=', 'po_created'),
+            ('import_id.purchase_order_id.state', '!=', 'cancel'),
+            ('item_unit_cost_incl_tax', '>', 0),
+        ]
+        if product:
+            domain.append(('product_id', '=', product.id))
+        return self.env['shop.purchase.import.line'].search(domain, order='id desc').sorted(
+            key=lambda line: (str(line.import_id.bill_date or ''), line.id), reverse=True)[:1]
+
+    def action_update_cost_from_bill(self):
+        self.ensure_one()
+        line = self._latest_shop_cost_bill_line()
+        if not line:
+            raise ValidationError(_('No positive Per-Item Cost was found in a purchase-order-created bill for this product and company.'))
+        if self.uom_id == self.env.ref('uom.product_uom_kgm'):
+            cost = line._initial_cost_in_company_currency()
+            if self.shop_price_by_weight:
+                self.shop_cost_per_kg = cost
+            else:
+                self.product_variant_ids.write({'standard_price': cost})
+        else:
+            line._sync_product_cost(line.product_id)
+        return True
+
     def action_load_shop_weight_options(self):
         self.ensure_one()
         names = configured_weight_names(self.env['ir.config_parameter'].sudo().get_param(
@@ -155,6 +192,10 @@ class ProductTemplate(models.Model):
                 candidate = template._guess_shop_weight_attribute()
                 if candidate:
                     template.with_context(shop_weight_defer=True).shop_weight_attribute_id = candidate
+            if not template.shop_cost_per_kg and template.uom_id == self.env.ref('uom.product_uom_kgm'):
+                line = template._latest_shop_cost_bill_line()
+                if line:
+                    template.with_context(shop_weight_defer=True).shop_cost_per_kg = line._initial_cost_in_company_currency()
             template._check_shop_weight_configuration()
             template.product_variant_ids._apply_shop_weight_prices()
 
@@ -181,10 +222,14 @@ class ProductTemplate(models.Model):
     def write(self, vals):
         if self.env.context.get('shop_weight_sync') or self.env.context.get('shop_weight_defer'):
             return super().write(vals)
-        if 'standard_price' in vals and any(
-            vals.get('shop_price_by_weight', template.shop_price_by_weight) for template in self
-        ):
-            raise ValidationError(_('Use Cost / kg to change the cost of a product with Price by Weight enabled.'))
+        weighted = self.filtered(lambda template: vals.get('shop_price_by_weight', template.shop_price_by_weight))
+        if 'standard_price' in vals and weighted:
+            updates = dict(vals)
+            updates.setdefault('shop_cost_per_kg', updates.pop('standard_price'))
+            weighted.write(updates)
+            if self - weighted:
+                (self - weighted).write(vals)
+            return True
         result = super(ProductTemplate, self.with_context(shop_weight_defer=True)).write(vals)
         if {'shop_price_by_weight', 'shop_weight_attribute_id', 'shop_cost_per_kg', 'list_price',
             'shop_sale_price_per_kg', 'shop_profit_percent', 'attribute_line_ids', 'uom_id'}.intersection(vals):
@@ -201,9 +246,26 @@ class ProductProduct(models.Model):
         inverse='_inverse_shop_weight_sale_amount',
         currency_field='currency_id', help='Amount for this weight at the current unit price, before tax calculation.')
     shop_weight_cost_amount = fields.Monetary(
-        string='Cost for Selected Weight', compute='_compute_shop_weight_amounts', currency_field='cost_currency_id')
+        string='Cost for Selected Weight', compute='_compute_shop_weight_amounts',
+        inverse='_inverse_shop_weight_cost_amount', currency_field='cost_currency_id')
     shop_weight_profit_percent = fields.Float(
         string='Profit %', related='product_tmpl_id.shop_profit_percent', readonly=False, digits=(16, 6))
+
+    def _inverse_shop_weight_cost_amount(self):
+        for product in self:
+            if product.shop_variant_weight_grams <= 0:
+                raise ValidationError(_('Select a positive weight before changing its cost.'))
+            product.product_tmpl_id.shop_cost_per_kg = product.shop_weight_cost_amount * 1000 / product.shop_variant_weight_grams
+
+    def action_update_cost_from_bill(self):
+        self.ensure_one()
+        if self.uom_id == self.env.ref('uom.product_uom_kgm'):
+            return self.product_tmpl_id.action_update_cost_from_bill()
+        line = self.product_tmpl_id._latest_shop_cost_bill_line(product=self)
+        if not line:
+            raise ValidationError(_('No positive reviewed bill cost was found for this variant and company.'))
+        line._sync_product_cost(self)
+        return True
 
     def _inverse_shop_weight_sale_amount(self):
         for product in self:
@@ -297,8 +359,31 @@ class ProductProduct(models.Model):
         if self.env.context.get('shop_weight_sync') or self.env.context.get('shop_weight_defer') or self.env.context.get('shop_variant_price_sync'):
             return super().write(vals)
         weighted = self.filtered('shop_price_by_weight')
-        if weighted and {'lst_price', 'shop_variant_sale_price', 'shop_variant_profit_percent'}.intersection(vals):
-            raise ValidationError(_('Price by Weight is enabled. Change Sales Price / kg or Profit % on the main product, or disable Price by Weight to edit individual prices.'))
+        price_keys = {'lst_price', 'shop_variant_sale_price', 'shop_variant_profit_percent'}
+        if weighted and price_keys.intersection(vals):
+            # Direct edits update the shared basis, rather than being rejected or
+            # overwritten by the next cost import. Explicit sale prices win.
+            remaining = {key: value for key, value in vals.items() if key not in price_keys}
+            if remaining:
+                weighted.write(remaining)
+            for product in weighted:
+                updates = {}
+                if ('shop_variant_profit_percent' in vals and
+                        vals['shop_variant_profit_percent'] != product.shop_profit_percent):
+                    updates['shop_profit_percent'] = vals['shop_variant_profit_percent']
+                price = vals.get('lst_price', vals.get('shop_variant_sale_price'))
+                if price is not None:
+                    if 'lst_price' in vals and self.env.context.get('uom'):
+                        price = self.env['uom.uom'].browse(self.env.context['uom'])._compute_price(price, product.uom_id)
+                    ratio = 1 if product.shop_loose_weight else product.shop_variant_weight_grams / 1000
+                    if ratio <= 0:
+                        raise ValidationError(_('Select a positive variant weight first.'))
+                    updates['list_price'] = (price - product.price_extra) / ratio
+                if updates:
+                    product.product_tmpl_id.write(updates)
+            if self - weighted:
+                (self - weighted).write(vals)
+            return True
         if weighted and 'standard_price' in vals:
             # Supplier bills provide cost per matched pack: convert to the kg basis.
             costs = {}

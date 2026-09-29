@@ -1176,9 +1176,16 @@ class ShopPurchaseImportLine(models.Model):
         self.ensure_one()
         if not product:
             return
-        product.with_company(self.company_id).standard_price = (
-            self._initial_cost_in_company_currency()
-        )
+        cost = self._initial_cost_in_company_currency()
+        # Empty OCR rates and free lines must never erase an established cost.
+        if cost <= 0:
+            return
+        product = product.with_company(self.company_id)
+        if product.shop_price_by_weight and product.uom_id == self.env.ref('uom.product_uom_kgm'):
+            # Old bills may point to the archived original variant.
+            product.product_tmpl_id.shop_cost_per_kg = cost
+        else:
+            product.standard_price = cost
 
     def _attach_created_product(
         self,

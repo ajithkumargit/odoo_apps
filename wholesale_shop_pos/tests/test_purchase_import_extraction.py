@@ -343,6 +343,9 @@ class TestPurchaseImportExtraction(TransactionCase):
         self.assertAlmostEqual(self.product.with_company(line.company_id).standard_price, 10.62)
         self.assertAlmostEqual(line.purchase_rate, 100)
         self.assertAlmostEqual(line._effective_purchase_price(), 90)
+        line.purchase_rate = 0
+        line._sync_product_cost(self.product)
+        self.assertAlmostEqual(self.product.with_company(line.company_id).standard_price, 10.62)
 
     def test_edit_total_updates_rate_and_preserves_reviewed_inputs(self):
         purchase_import = self.env["shop.purchase.import"].create({
