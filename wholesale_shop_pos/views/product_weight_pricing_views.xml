@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_product_weight_pricing_common" model="ir.ui.view">
+        <field name="name">product.template.weight.pricing</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='group_standard_price']" position="after">
+                <group string="Weight Pricing" name="shop_weight_pricing">
+                    <field name="shop_price_by_weight"/>
+                    <field name="shop_weight_attribute_id" invisible="not shop_price_by_weight" required="shop_price_by_weight"
+                           domain="[('create_variant', '!=', 'no_variant')]" options="{'no_create': True}"/>
+                    <field name="shop_cost_per_kg" invisible="not shop_price_by_weight"/>
+                    <field name="shop_sale_price_per_kg" invisible="not shop_price_by_weight"/>
+                    <div colspan="2" class="text-muted" invisible="not shop_price_by_weight">
+                        Add weights under Attributes &amp; Variants, using names such as 100g, 250g, 500g, 750g or 1kg.
+                        Each variant is one pack. Cost and sales price = the kg amount × grams ÷ 1000.
+                        Changing Cost / kg updates pack costs; change Sales Price / kg or Profit % to change selling prices.
+                    </div>
+                </group>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_template_weight_price_labels" model="ir.ui.view">
+        <field name="name">product.template.weight.price.labels</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="wholesale_shop_pos.view_product_template_form_profit_wholesale_shop"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='shop_profit_percent']" position="attributes">
+                <attribute name="invisible">product_variant_count &gt; 1 and not shop_price_by_weight</attribute>
+            </xpath>
+            <xpath expr="//div[@name='list_price_uom']" position="attributes"><attribute name="invisible">shop_price_by_weight</attribute></xpath>
+            <xpath expr="//label[@for='list_price']" position="attributes"><attribute name="invisible">shop_price_by_weight</attribute></xpath>
+            <xpath expr="//field[@name='standard_price']" position="attributes"><attribute name="readonly">shop_price_by_weight</attribute></xpath>
+        </field>
+    </record>
+    <record id="view_variant_weight_prices" model="ir.ui.view">
+        <field name="name">product.product.weight.prices</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="wholesale_shop_pos.view_product_product_form_wholesale_shop"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='shop_mrp']" position="before">
+                <field name="shop_variant_weight_grams" invisible="not shop_price_by_weight"/>
+            </xpath>
+            <xpath expr="//field[@name='shop_variant_sale_price']" position="attributes"><attribute name="readonly">shop_price_by_weight</attribute></xpath>
+            <xpath expr="//field[@name='lst_price']" position="attributes"><attribute name="readonly">shop_price_by_weight</attribute></xpath>
+            <xpath expr="//field[@name='standard_price']" position="attributes"><attribute name="readonly">shop_price_by_weight</attribute></xpath>
+            <xpath expr="//field[@name='shop_variant_profit_percent']" position="attributes"><attribute name="invisible">shop_price_by_weight</attribute></xpath>
+            <xpath expr="//field[@name='shop_variant_price_check']" position="attributes"><attribute name="invisible">shop_price_by_weight</attribute></xpath>
+            <xpath expr="//button[@name='action_apply_shop_variant_checked_profit']" position="attributes">
+                <attribute name="invisible">shop_price_by_weight or not shop_variant_price_check</attribute>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_weight_attribute_values" model="ir.ui.view">
+        <field name="name">product.attribute.weight.values</field>
+        <field name="model">product.attribute</field>
+        <field name="inherit_id" ref="product.product_attribute_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='value_ids']/list/field[@name='name']" position="after">
+                <field name="shop_weight_grams" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_weight_variant_list" model="ir.ui.view">
+        <field name="name">product.product.weight.list</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="product.product_product_tree_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='lst_price']" position="before">
+                <field name="shop_price_by_weight" column_invisible="True"/>
+                <field name="shop_variant_weight_grams" optional="hide"/>
+            </xpath>
+            <xpath expr="//field[@name='lst_price']" position="attributes"><attribute name="readonly">shop_price_by_weight</attribute></xpath>
+            <xpath expr="//field[@name='standard_price']" position="attributes"><attribute name="readonly">shop_price_by_weight</attribute></xpath>
+        </field>
+    </record>
+    <record id="view_weight_variant_easy_edit" model="ir.ui.view">
+        <field name="name">product.product.weight.easy.edit</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="product.product_variant_easy_edit_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='lst_price']" position="before">
+                <field name="shop_price_by_weight" invisible="True"/>
+            </xpath>
+            <xpath expr="//field[@name='lst_price']" position="attributes">
+                <attribute name="readonly">shop_price_by_weight or product_variant_count &gt; 1</attribute>
+            </xpath>
+            <xpath expr="//field[@name='standard_price']" position="attributes">
+                <attribute name="readonly">shop_price_by_weight</attribute>
+            </xpath>
+            <xpath expr="//field[@name='standard_price']/.." position="after">
+                <field name="shop_variant_weight_grams" invisible="not shop_price_by_weight"/>
+                <field name="shop_cost_per_kg" invisible="not shop_price_by_weight"/>
+                <field name="shop_sale_price_per_kg" invisible="not shop_price_by_weight"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

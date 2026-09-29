@@ -9,6 +9,7 @@ from . import product_creation_wizard
 from . import purchase_order
 
 from . import product_manual_sale_price
+from . import product_weight_pricing
 from . import product_price_audit
 
 from . import user_menu_access

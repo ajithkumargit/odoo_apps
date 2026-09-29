@@ -1,7 +1,7 @@
 {
     "name": "Wholesale Shop POS Core",
     "summary": "Wholesale/retail POS support, purchase bill staging, vendor product mapping and price history",
-    "version": "19.0.1.29.0",
+    "version": "19.0.1.30.0",
     "category": "Sales/Point of Sale",
     "author": "Custom",
     "license": "LGPL-3",
@@ -33,6 +33,7 @@
         "views/bill_ocr_template_views.xml",
         "views/price_history_views.xml",
         "views/product_views.xml",
+        "views/product_weight_pricing_views.xml",
         "views/res_config_settings_views.xml",
         "views/menu_views.xml",
         "views/user_menu_access_views.xml",
