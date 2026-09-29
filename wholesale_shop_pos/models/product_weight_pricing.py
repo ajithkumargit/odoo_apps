@@ -198,9 +198,44 @@ class ProductProduct(models.Model):
     shop_loose_weight = fields.Boolean(compute='_compute_shop_loose_weight')
     shop_weight_sale_amount = fields.Monetary(
         string='Sales Amount for Selected Weight', compute='_compute_shop_weight_amounts',
+        inverse='_inverse_shop_weight_sale_amount',
         currency_field='currency_id', help='Amount for this weight at the current unit price, before tax calculation.')
     shop_weight_cost_amount = fields.Monetary(
         string='Cost for Selected Weight', compute='_compute_shop_weight_amounts', currency_field='cost_currency_id')
+    shop_weight_profit_percent = fields.Float(
+        string='Profit %', related='product_tmpl_id.shop_profit_percent', readonly=False, digits=(16, 6))
+
+    def _inverse_shop_weight_sale_amount(self):
+        for product in self:
+            if not product.shop_price_by_weight or product.shop_variant_weight_grams <= 0:
+                raise ValidationError(_('Select a positive weight before changing its sales amount.'))
+            amount = product.shop_weight_sale_amount
+            ratio = product.shop_variant_weight_grams / 1000
+            extra = product.price_extra * (ratio if product.shop_loose_weight else 1)
+            product.product_tmpl_id.shop_sale_price_per_kg = (amount - extra) / ratio
+
+    @api.depends('shop_variant_price_check', 'standard_price', 'shop_weight_cost_amount', 'shop_price_by_weight')
+    def _compute_shop_variant_price_check_profit_percent(self):
+        super()._compute_shop_variant_price_check_profit_percent()
+        for product in self.filtered('shop_price_by_weight'):
+            cost = product.shop_weight_cost_amount
+            product.shop_variant_price_check_profit_percent = (
+                (product.shop_variant_price_check - cost) / cost * 100
+                if cost and product.shop_variant_price_check else 0)
+
+    def action_apply_shop_variant_checked_profit(self):
+        self.ensure_one()
+        if not self.shop_price_by_weight:
+            return super().action_apply_shop_variant_checked_profit()
+        if self.shop_weight_cost_amount <= 0 or self.shop_variant_price_check <= self.shop_weight_cost_amount:
+            raise ValidationError(_('Enter a checked price above the cost for the selected weight.'))
+        # Apply the exact entered amount, without a percentage-rounding round trip.
+        self.product_tmpl_id.write({
+            'shop_profit_percent': self.shop_variant_price_check_profit_percent,
+            'list_price': (self.shop_variant_price_check / (self.shop_variant_weight_grams / 1000)
+                           - (self.price_extra if self.shop_loose_weight else self.price_extra / (self.shop_variant_weight_grams / 1000))),
+        })
+        return True
 
     @api.depends('shop_loose_weight', 'shop_price_by_weight', 'shop_variant_weight_grams',
                  'shop_variant_sale_price', 'standard_price')

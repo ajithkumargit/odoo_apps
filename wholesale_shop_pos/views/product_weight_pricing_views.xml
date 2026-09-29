@@ -52,16 +52,23 @@
                     <field name="shop_variant_weight_grams" string="Selected Weight (g)"/>
                     <field name="shop_weight_sale_amount"/>
                     <field name="shop_weight_cost_amount"/>
+                    <field name="shop_weight_profit_percent"/>
+                    <div colspan="2" class="text-muted">Editing the selected weight's sales price, Profit %, or applying Price to Check updates the shared kg rate and all weights of this product.</div>
                     <div colspan="2" class="text-muted">These amounts are for the selected weight. The unit prices above remain per kg for loose-weight products.</div>
                 </group>
+            </xpath>
+            <xpath expr="//label[@for='lst_price']" position="attributes"><attribute name="invisible">shop_price_by_weight</attribute></xpath>
+            <xpath expr="//div[@name='list_price_uom']" position="attributes"><attribute name="invisible">shop_price_by_weight</attribute></xpath>
+            <xpath expr="//div[@name='list_price_uom']" position="after">
+                <field name="shop_weight_sale_amount" string="Sales Price (Selected Weight)" invisible="not shop_price_by_weight"/>
             </xpath>
             <xpath expr="//field[@name='shop_variant_sale_price']" position="attributes"><attribute name="readonly">shop_price_by_weight</attribute><attribute name="invisible">shop_price_by_weight</attribute></xpath>
             <xpath expr="//field[@name='lst_price']" position="attributes"><attribute name="readonly">shop_price_by_weight</attribute></xpath>
             <xpath expr="//field[@name='standard_price']" position="attributes"><attribute name="readonly">shop_price_by_weight</attribute></xpath>
             <xpath expr="//field[@name='shop_variant_profit_percent']" position="attributes"><attribute name="invisible">shop_price_by_weight</attribute></xpath>
-            <xpath expr="//field[@name='shop_variant_price_check']" position="attributes"><attribute name="invisible">shop_price_by_weight</attribute></xpath>
+            <xpath expr="//field[@name='shop_variant_price_check']" position="attributes"><attribute name="invisible">False</attribute></xpath>
             <xpath expr="//button[@name='action_apply_shop_variant_checked_profit']" position="attributes">
-                <attribute name="invisible">shop_price_by_weight or not shop_variant_price_check</attribute>
+                <attribute name="invisible">not shop_variant_price_check</attribute>
             </xpath>
         </field>
     </record>
