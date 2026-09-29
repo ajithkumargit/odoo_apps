@@ -111,6 +111,18 @@ class ProductTemplate(models.Model):
         )
         return candidates.attribute_id if len(candidates) == 1 else self.env['product.attribute']
 
+    def _prepare_variant_values(self, combination):
+        values = super()._prepare_variant_values(combination)
+        # Odoo replaces the original variant when multiple values are added.
+        # Carry its cost in the unchanged UoM; do not interpret kg as packs.
+        # Enabled weight pricing will apply its explicit kg basis afterwards.
+        original = self.product_variant_ids
+        if (not self.shop_price_by_weight and len(original) == 1
+                and not original.product_template_attribute_value_ids
+                and any(value.product_attribute_value_id.shop_weight_grams > 0 for value in combination)):
+            values['standard_price'] = original.standard_price
+        return values
+
     @api.onchange('shop_price_by_weight', 'attribute_line_ids')
     def _onchange_shop_weight_attribute(self):
         for template in self:
