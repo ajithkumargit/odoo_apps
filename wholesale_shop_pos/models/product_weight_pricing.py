@@ -67,7 +67,7 @@ class ProductTemplate(models.Model):
     _inherit = 'product.template'
 
     shop_price_by_weight = fields.Boolean(string='Price by Weight',
-        help='Sales Price is the price for 1 kg. Each weight variant is sold as one pack, with proportional cost and sales price.')
+        help='Prices are based on 1 kg. With kg as the unit, POS selects a fractional kg quantity. With Units, variants have proportional pack prices and costs.')
     shop_weight_attribute_id = fields.Many2one('product.attribute', string='Weight Attribute',
         help='Select the variant attribute containing weights such as 100g, 250g, 500g and 1kg.')
     shop_cost_per_kg = fields.Float(string='Cost / kg', digits='Product Price', company_dependent=True)
@@ -140,8 +140,8 @@ class ProductTemplate(models.Model):
             raise ValidationError(_('Every weight value needs a positive Weight (g). Use a name such as 250g, or enter grams on the attribute value.'))
         if any(value.price_extra for value in lines.product_template_value_ids.filtered('ptav_active')):
             raise ValidationError(_('Set the extra prices on the Weight Attribute to zero. Price by Weight calculates the complete pack price.'))
-        if self.uom_id != self.env.ref('uom.product_uom_unit'):
-            raise ValidationError(_('Weight variants represent individual packs. Set their unit of measure to Units before enabling Price by Weight.'))
+        if self.uom_id not in (self.env.ref('uom.product_uom_unit') | self.env.ref('uom.product_uom_kgm')):
+            raise ValidationError(_('Use kg for loose-weight sales or Units for separate packs.'))
         if self.shop_cost_per_kg <= 0 or not math.isfinite(self.shop_cost_per_kg):
             raise ValidationError(_('Enter a positive Cost / kg before enabling or updating Price by Weight. Existing pack costs will not be replaced with a blank or zero kg cost.'))
         if self.list_price < 0:
@@ -195,6 +195,18 @@ class ProductTemplate(models.Model):
 class ProductProduct(models.Model):
     _inherit = 'product.product'
 
+    shop_loose_weight = fields.Boolean(compute='_compute_shop_loose_weight')
+
+    @api.depends('shop_price_by_weight', 'uom_id')
+    def _compute_shop_loose_weight(self):
+        kg = self.env.ref('uom.product_uom_kgm')
+        for product in self:
+            product.shop_loose_weight = product.shop_price_by_weight and product.uom_id == kg
+
+    @api.model
+    def _load_pos_data_fields(self, config):
+        return super()._load_pos_data_fields(config) + ['shop_loose_weight', 'shop_variant_weight_grams']
+
     def action_load_shop_weight_options(self):
         self.ensure_one()
         return self.product_tmpl_id.action_load_shop_weight_options()
@@ -218,7 +230,7 @@ class ProductProduct(models.Model):
                 raise ValidationError(_('Enter a positive Cost / kg before calculating weight variant costs.'))
             if product.shop_variant_weight_grams <= 0:
                 raise ValidationError(_('Select exactly one positive weight for each variant.'))
-            ratio = product.shop_variant_weight_grams / 1000
+            ratio = 1 if product.shop_loose_weight else product.shop_variant_weight_grams / 1000
             product.with_context(shop_weight_sync=True, shop_variant_price_sync=True).write({
                 'standard_price': product.shop_cost_per_kg * ratio,
                 'shop_fixed_sale_price': product.currency_id.round(product.list_price * ratio + product.price_extra),
@@ -244,7 +256,7 @@ class ProductProduct(models.Model):
             for product in weighted:
                 if product.shop_variant_weight_grams <= 0:
                     raise ValidationError(_('Set the variant weight before updating its cost.'))
-                cost = vals['standard_price'] * 1000 / product.shop_variant_weight_grams
+                cost = vals['standard_price'] if product.shop_loose_weight else vals['standard_price'] * 1000 / product.shop_variant_weight_grams
                 template = product.product_tmpl_id
                 if template in costs and abs(costs[template] - cost) > 0.000001:
                     raise ValidationError(_('Update Cost / kg on the main product instead of setting the same pack cost on different weights.'))

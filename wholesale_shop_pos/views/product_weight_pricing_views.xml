@@ -16,7 +16,8 @@
                     <field name="shop_sale_price_per_kg" invisible="not shop_price_by_weight"/>
                     <div colspan="2" class="text-muted" invisible="not shop_price_by_weight">
                         Add weights under Attributes &amp; Variants, using names such as 100g, 250g, 500g, 750g or 1kg.
-                        Each variant is one pack. Cost and sales price = the kg amount × grams ÷ 1000.
+                        With kg as the unit, cost and price stay per kg; selecting a weight in POS sets its kg quantity (250g = 0.25 kg).
+                        With Units, each variant is one pack and cost and price are the kg amount × grams ÷ 1000.
                         Changing Cost / kg updates pack costs; change Sales Price / kg or Profit % to change selling prices.
                     </div>
                 </group>

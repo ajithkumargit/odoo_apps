@@ -76,6 +76,21 @@ class TestProductWeightPricing(TransactionCase):
         for name, expected in [('250 gm', 250), ('0.5 kg', 500), ('125g', 125), ('Large', 0)]:
             self.assertEqual(grams_from_name(name), expected)
 
+    def test_loose_weight_keeps_cost_and_price_per_kg(self):
+        self.template.uom_id = self.env.ref('uom.product_uom_kgm')
+        for variant in self.template.product_variant_ids:
+            self.assertTrue(variant.shop_loose_weight)
+            self.assertEqual(variant.standard_price, 80)
+            self.assertEqual(variant.lst_price, 120)
+        self.template.product_variant_ids[0].standard_price = 51
+        self.assertEqual(self.template.shop_cost_per_kg, 51)
+        self.template.shop_sale_price_per_kg = 56
+        for variant in self.template.product_variant_ids:
+            self.assertEqual(variant.standard_price, 51)
+            self.assertEqual(variant.lst_price, 56)
+            self.assertAlmostEqual(variant.lst_price * variant.shop_variant_weight_grams / 1000,
+                                   56 * variant.shop_variant_weight_grams / 1000)
+
     def test_adding_weights_preserves_original_cost_in_same_uom(self):
         product = self.env['product.template'].create({
             'name': 'Sugar in kg', 'standard_price': 51, 'list_price': 56,
