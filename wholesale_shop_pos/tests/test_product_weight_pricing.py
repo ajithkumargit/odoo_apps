@@ -76,6 +76,31 @@ class TestProductWeightPricing(TransactionCase):
         for name, expected in [('250 gm', 250), ('0.5 kg', 500), ('125g', 125), ('Large', 0)]:
             self.assertEqual(grams_from_name(name), expected)
 
+    def test_blank_kg_cost_cannot_erase_existing_costs(self):
+        self.template.shop_price_by_weight = False
+        self.template.shop_cost_per_kg = 0
+        before = {p.id: p.standard_price for p in self.template.product_variant_ids}
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            self.template.shop_price_by_weight = True
+        self.assertFalse(self.template.shop_price_by_weight)
+        self.assertEqual(before, {p.id: p.standard_price for p in self.template.product_variant_ids})
+
+    def test_zero_kg_or_supplier_cost_rolls_back(self):
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            self.template.shop_cost_per_kg = 0
+        self.assert_prices(80, 120)
+        with self.assertRaises(ValidationError), self.env.cr.savepoint():
+            self.template.product_variant_ids[0].standard_price = 0
+        self.assert_prices(80, 120)
+
+    def test_normal_product_cost_is_unchanged_by_weight_options(self):
+        self.template.shop_price_by_weight = False
+        self.template.shop_cost_per_kg = 0
+        before = {p.id: p.standard_price for p in self.template.product_variant_ids}
+        self.template.action_load_shop_weight_options()
+        for product_id, cost in before.items():
+            self.assertEqual(self.env['product.product'].browse(product_id).standard_price, cost)
+
     def test_configured_weights_are_dynamic_and_additive(self):
         params = self.env['ir.config_parameter'].sudo()
         params.set_param('wholesale_shop_pos.weight_options', '100g,200g,500g,750g,125g')

@@ -130,8 +130,10 @@ class ProductTemplate(models.Model):
             raise ValidationError(_('Set the extra prices on the Weight Attribute to zero. Price by Weight calculates the complete pack price.'))
         if self.uom_id != self.env.ref('uom.product_uom_unit'):
             raise ValidationError(_('Weight variants represent individual packs. Set their unit of measure to Units before enabling Price by Weight.'))
-        if self.shop_cost_per_kg < 0 or self.list_price < 0:
-            raise ValidationError(_('Cost / kg and Sales Price / kg cannot be negative.'))
+        if self.shop_cost_per_kg <= 0 or not math.isfinite(self.shop_cost_per_kg):
+            raise ValidationError(_('Enter a positive Cost / kg before enabling or updating Price by Weight. Existing pack costs will not be replaced with a blank or zero kg cost.'))
+        if self.list_price < 0:
+            raise ValidationError(_('Sales Price / kg cannot be negative.'))
 
     def _sync_shop_weight_prices(self):
         if self.env.context.get('shop_weight_sync') or self.env.context.get('shop_weight_defer'):
@@ -198,6 +200,10 @@ class ProductProduct(models.Model):
 
     def _apply_shop_weight_prices(self):
         for product in self.filtered(lambda p: p.shop_price_by_weight and p.active):
+            # Also protect new/dynamic variants and direct calls, which can bypass
+            # the template synchronization entry point.
+            if product.shop_cost_per_kg <= 0 or not math.isfinite(product.shop_cost_per_kg):
+                raise ValidationError(_('Enter a positive Cost / kg before calculating weight variant costs.'))
             if product.shop_variant_weight_grams <= 0:
                 raise ValidationError(_('Select exactly one positive weight for each variant.'))
             ratio = product.shop_variant_weight_grams / 1000
