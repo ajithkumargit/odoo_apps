@@ -7,9 +7,14 @@ from odoo.exceptions import UserError
 class PurchaseOrderLine(models.Model):
     _inherit = 'purchase.order.line'
 
+    shop_items_per_purchase_unit = fields.Float(
+        string='Items in One Purchase Unit', default=1.0,
+        help='Number of base items or kg in one purchased quantity. Example: a bag costing 2450 with 50 items gives a cost of 49 per item/kg. Leave blank or 0 to use 1. This changes product costing, not the order quantity or invoice total.',
+    )
+
     def write(self, vals):
         result = super().write(vals)
-        if {'price_unit', 'discount', 'tax_ids', 'product_uom_id'}.intersection(vals):
+        if {'price_unit', 'discount', 'tax_ids', 'product_uom_id', 'shop_items_per_purchase_unit'}.intersection(vals):
             self.move_ids._shop_sync_received_purchase_cost()
         return result
 

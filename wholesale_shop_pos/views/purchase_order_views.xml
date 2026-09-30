@@ -5,6 +5,12 @@
         <field name="model">purchase.order</field>
         <field name="inherit_id" ref="purchase.purchase_order_form"/>
         <field name="arch" type="xml">
+            <xpath expr="//field[@name='order_line']/list/field[@name='price_unit']" position="after">
+                <field name="shop_items_per_purchase_unit" optional="show"/>
+            </xpath>
+            <xpath expr="//field[@name='order_line']/form//field[@name='price_unit']" position="after">
+                <field name="shop_items_per_purchase_unit"/>
+            </xpath>
             <xpath expr="//field[@name='partner_id']" position="attributes">
                 <attribute name="domain">[('shop_is_vendor', '=', True)]</attribute>
                 <attribute name="context">{'default_shop_is_vendor': True, 'show_vat': True}</attribute>

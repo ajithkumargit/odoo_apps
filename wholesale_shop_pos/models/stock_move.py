@@ -23,9 +23,12 @@ class StockMove(models.Model):
                 continue
             product = move.product_id.with_company(move.company_id)
             cost = line.price_total / line.product_qty
+            items = line.shop_items_per_purchase_unit if line.shop_items_per_purchase_unit > 0 else 1.0
             kg = self.env.ref('uom.product_uom_kgm')
             target_uom = kg if product.shop_price_by_weight and line.product_uom_id == kg else product.uom_id
-            cost = line.product_uom_id._compute_price(cost, target_uom)
+            # An explicit item count already expresses the cost in base units;
+            # do not also apply the purchase-UoM conversion a second time.
+            cost = cost / items if items != 1 else line.product_uom_id._compute_price(cost, target_uom)
             cost = line.currency_id._convert(cost, move.company_id.currency_id, move.company_id, move.date)
             if cost <= 0:
                 continue

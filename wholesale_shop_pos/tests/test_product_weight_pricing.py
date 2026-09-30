@@ -102,6 +102,11 @@ class TestProductWeightPricing(TransactionCase):
             self.assertEqual(variant.standard_price, 49)
             self.assertEqual(variant.lst_price, 56)
         self.assertEqual(product.qty_available, 50)
+        order.order_line.write({'price_unit': 2450, 'shop_items_per_purchase_unit': 50})
+        self.assertEqual(self.template.shop_cost_per_kg, 49)
+        self.assertEqual(product.qty_available, 50)
+        order.order_line.write({'price_unit': 49, 'shop_items_per_purchase_unit': 0})
+        self.assertEqual(self.template.shop_cost_per_kg, 49)
         order.order_line.price_unit = 48
         self.assertEqual(self.template.shop_cost_per_kg, 48)
         for variant in self.template.product_variant_ids:

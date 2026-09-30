@@ -1,7 +1,7 @@
 {
     "name": "Wholesale Shop POS Core",
     "summary": "Wholesale/retail POS support, purchase bill staging, vendor product mapping and price history",
-    "version": "19.0.1.42.0",
+    "version": "19.0.1.43.0",
     "category": "Sales/Point of Sale",
     "author": "Custom",
     "license": "LGPL-3",
