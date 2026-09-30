@@ -28,8 +28,8 @@
                         type="object"
                         class="btn-secondary"
                         icon="fa-undo"
-                        title="Cancel the draft bill, reverse received stock, cancel this order, and return the import to Review"
-                        confirm="This will cancel the draft vendor bill, create and validate stock returns, cancel this purchase order, and reopen the import. Continue?"
+                        title="Cancel linked vendor bills, reverse received stock, cancel this order, and return the import to Review"
+                        confirm="This will cancel linked vendor bills (including posted bills) and their linked payments, create and validate stock returns, cancel this purchase order, and reopen the import. Continue?"
                         invisible="not shop_purchase_import_id or shop_import_state != 'po_created'"/>
             </xpath>
 

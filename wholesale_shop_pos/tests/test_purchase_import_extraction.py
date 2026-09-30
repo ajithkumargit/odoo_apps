@@ -593,6 +593,12 @@ class TestPurchaseImportExtraction(TransactionCase):
         self.assertAlmostEqual(second_line.product_id.standard_price, 80.0)
 
     def test_purchase_order_integrated_ocr_receive_and_draft_bill(self):
+        self._check_integrated_purchase_revert(post_bill=False)
+
+    def test_purchase_order_revert_cancels_posted_bill(self):
+        self._check_integrated_purchase_revert(post_bill=True)
+
+    def _check_integrated_purchase_revert(self, post_bill):
         stock_product = self.env["product.product"].create({
             "name": "Integrated OCR Product",
             "purchase_ok": True,
@@ -638,6 +644,11 @@ class TestPurchaseImportExtraction(TransactionCase):
         self.assertEqual(order.invoice_ids.state, "draft")
         self.assertEqual(order.invoice_ids.ref, "OCR-PO-1001")
         self.assertEqual(stock_product.qty_available - quantity_before, 3)
+
+        if post_bill:
+            order.invoice_ids.action_post()
+            self.assertEqual(order.invoice_ids.state, 'posted')
+            self.assertEqual(order.invoice_ids.payment_state, 'not_paid')
 
         order.action_shop_revert_import()
 

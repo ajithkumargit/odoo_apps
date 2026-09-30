@@ -36,8 +36,8 @@
                     <button name="action_revert_purchase_workflow"
                             string="Revert" type="object" class="btn-secondary"
                             icon="fa-undo"
-                            title="Cancel the draft vendor bill, return received stock, cancel the purchase order, and reopen this import for review"
-                            confirm="This will cancel the draft vendor bill, create and validate stock returns, cancel the purchase order, and reopen the import. Continue?"
+                            title="Cancel linked vendor bills, return received stock, cancel the purchase order, and reopen this import for review"
+                            confirm="This will cancel linked vendor bills (including posted bills) and their linked payments, create and validate stock returns, cancel the purchase order, and reopen the import. Continue?"
                             invisible="state != 'po_created' or not purchase_order_id"/>
                     <button name="action_reset_to_review" string="Reset to Review" type="object" invisible="state not in ('ready', 'po_created')"/>
                     <button name="action_cancel" string="Cancel" type="object" invisible="state == 'cancelled'"/>

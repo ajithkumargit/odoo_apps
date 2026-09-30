@@ -336,17 +336,12 @@ class PurchaseOrder(models.Model):
         if not purchase_import:
             raise UserError(_("This purchase order is not linked to a bill import."))
 
-        posted_bills = self.invoice_ids.filtered(lambda bill: bill.state == "posted")
-        if posted_bills:
-            raise UserError(_(
-                "Revert is blocked because vendor bill(s) %(bills)s are posted. "
-                "Reset or reverse them in Accounting first.",
-                bills=", ".join(posted_bills.mapped("name")),
-            ))
-
-        draft_bills = self.invoice_ids.filtered(lambda bill: bill.state == "draft")
-        if draft_bills:
-            draft_bills.button_cancel()
+        # Standard cancellation handles posted -> draft -> cancelled and
+        # reconciliations. Let Accounting enforce its own locks/permissions;
+        # posting alone must not force the user out of the import workflow.
+        bills = self.invoice_ids.filtered(lambda bill: bill.state in ('draft', 'posted'))
+        if bills:
+            bills.button_cancel()
 
         completed_receipts = self.picking_ids.filtered(
             lambda picking: (
