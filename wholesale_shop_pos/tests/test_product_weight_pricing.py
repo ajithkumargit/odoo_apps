@@ -76,6 +76,24 @@ class TestProductWeightPricing(TransactionCase):
         for name, expected in [('250 gm', 250), ('0.5 kg', 500), ('125g', 125), ('Large', 0)]:
             self.assertEqual(grams_from_name(name), expected)
 
+    def test_variant_form_saves_weight_settings_atomically(self):
+        self.template.shop_price_by_weight = False
+        self.template.shop_cost_per_kg = 0
+        variant = self.template.product_variant_ids.filtered(lambda p: p.shop_variant_weight_grams == 250)
+        variant.write({
+            'shop_price_by_weight': True,
+            'shop_weight_attribute_id': self.attribute.id,
+            'shop_cost_per_kg': 46.15,
+            'shop_sale_price_per_kg': 52,
+            'standard_price': 46.15,
+        })
+        self.assertAlmostEqual(self.template.shop_cost_per_kg, 46.15)
+        self.assertAlmostEqual(variant.standard_price, 46.15 / 4)
+        self.assertAlmostEqual(variant.lst_price, 13)
+        variant.write({'shop_weight_sale_amount': 15, 'shop_cost_per_kg': 48})
+        self.assertAlmostEqual(variant.standard_price, 12)
+        self.assertAlmostEqual(variant.lst_price, 15)
+
     def test_edit_cost_and_sale_fields_without_readonly_guards(self):
         self.template.uom_id = self.env.ref('uom.product_uom_kgm')
         variant = self.template.product_variant_ids.filtered(lambda p: p.shop_variant_weight_grams == 250)

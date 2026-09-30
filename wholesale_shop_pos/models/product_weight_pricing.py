@@ -185,7 +185,8 @@ class ProductTemplate(models.Model):
             raise ValidationError(_('Sales Price / kg cannot be negative.'))
 
     def _sync_shop_weight_prices(self):
-        if self.env.context.get('shop_weight_sync') or self.env.context.get('shop_weight_defer'):
+        if (self.env.context.get('shop_weight_sync') or self.env.context.get('shop_weight_defer')
+                or self.env.context.get('shop_weight_atomic')):
             return
         for template in self.filtered('shop_price_by_weight'):
             if not template.shop_weight_attribute_id:
@@ -334,6 +335,8 @@ class ProductProduct(models.Model):
             product.shop_variant_weight_grams = values.product_attribute_value_id.shop_weight_grams if len(values) == 1 else 0
 
     def _apply_shop_weight_prices(self):
+        if self.env.context.get('shop_weight_atomic'):
+            return
         for product in self.filtered(lambda p: p.shop_price_by_weight and p.active):
             # Also protect new/dynamic variants and direct calls, which can bypass
             # the template synchronization entry point.
@@ -358,6 +361,23 @@ class ProductProduct(models.Model):
     def write(self, vals):
         if self.env.context.get('shop_weight_sync') or self.env.context.get('shop_weight_defer') or self.env.context.get('shop_variant_price_sync'):
             return super().write(vals)
+        weight_inputs = {
+            'shop_price_by_weight', 'shop_weight_attribute_id', 'shop_cost_per_kg',
+            'shop_sale_price_per_kg', 'list_price', 'standard_price', 'lst_price',
+            'shop_variant_sale_price', 'shop_variant_profit_percent', 'shop_profit_percent',
+            'shop_weight_sale_amount', 'shop_weight_cost_amount', 'shop_weight_profit_percent',
+            'product_template_attribute_value_ids', 'uom_id', 'active',
+        }
+        if not self.env.context.get('shop_weight_atomic') and weight_inputs.intersection(vals):
+            # Delegated template fields and computed-field inverses are written
+            # in separate steps. Validate only after the entire form is saved.
+            updates = dict(vals)
+            if 'shop_cost_per_kg' in updates:
+                updates.pop('standard_price', None)
+                updates.pop('shop_weight_cost_amount', None)
+            result = self.with_context(shop_weight_atomic=True).write(updates)
+            self.product_tmpl_id._sync_shop_weight_prices()
+            return result
         weighted = self.filtered('shop_price_by_weight')
         price_keys = {'lst_price', 'shop_variant_sale_price', 'shop_variant_profit_percent'}
         if weighted and price_keys.intersection(vals):
