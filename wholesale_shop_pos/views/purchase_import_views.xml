@@ -137,7 +137,7 @@
                             <field name="crop_bottom" invisible="1"/>
                         </page>
                         <page string="Bill Lines">
-                            <field name="line_ids" readonly="state in ('po_created', 'cancelled')" context="{'default_import_id': id}">
+                            <field name="line_ids" context="{'default_import_id': id}">
                                 <list editable="bottom" class="o_shop_bill_lines_list">
                                     <field name="sequence" widget="handle"/>
                                     <field name="raw_description" widget="line_name_crop" width="200px"/>
@@ -161,7 +161,7 @@
                                     <field name="item_unit_cost_incl_tax" readonly="1" optional="show"/>
                                     <field name="taxable_amount" readonly="1"/>
                                     <field name="tax_amount" readonly="1" optional="hide"/>
-                                    <field name="total_amount" readonly="parent.state not in ('draft', 'review')"/>
+                                    <field name="total_amount"/>
                                     <field name="extraction_confidence" optional="hide"/>
                                 </list>
                                 <form>
@@ -188,7 +188,7 @@
                                         <field name="purchase_unit_price_incl_tax" readonly="1"/>
                                         <field name="units_per_purchase_qty"/>
                                         <field name="item_unit_cost_incl_tax" readonly="1"/>
-                                        <field name="total_amount" readonly="parent.state not in ('draft', 'review')"/>
+                                        <field name="total_amount"/>
                                     </group>
                                 </form>
                             </field>
