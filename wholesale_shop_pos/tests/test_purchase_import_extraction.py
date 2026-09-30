@@ -633,6 +633,37 @@ class TestPurchaseImportExtraction(TransactionCase):
         self.assertFalse(purchase_import.purchase_order_id)
         self.assertFalse(order.shop_purchase_import_id)
 
+        # Reimport the corrected bag cost after reversing the original receipt.
+        purchase_import.line_ids.write({
+            'purchase_rate': 3050.10, 'units_per_purchase_qty': 30,
+        })
+        self.assertAlmostEqual(purchase_import.line_ids.item_unit_cost_incl_tax, 101.67)
+        self.assertAlmostEqual(stock_product.standard_price, 101.67)
+        purchase_import.action_create_reviewed_purchase_order()
+        replacement = purchase_import.purchase_order_id
+        self.assertNotEqual(replacement, order)
+        self.assertAlmostEqual(stock_product.standard_price, 101.67)
+        replacement.action_shop_receive_and_create_bill()
+        self.assertAlmostEqual(stock_product.standard_price, 101.67)
+
+    def test_reextraction_and_review_corrections_update_matched_cost(self):
+        self.product.standard_price = 80
+        self.product.lst_price = 140
+        purchase_import = self._new_import()
+        purchase_import._apply_extracted_bill({
+            'lines': [{'description': self.product.name, 'barcode': self.product.barcode,
+                       'quantity': 1, 'purchase_rate': 101.67}],
+        }, 'test', 'cost-reimport')
+        self.assertEqual(purchase_import.state, 'review')
+        self.assertFalse(purchase_import.purchase_order_id)
+        self.assertEqual(purchase_import.line_ids.product_id, self.product)
+        self.assertAlmostEqual(self.product.standard_price, 101.67)
+        self.assertEqual(self.product.lst_price, 140)
+        purchase_import.line_ids.write({'purchase_rate': 3050.10, 'units_per_purchase_qty': 30})
+        self.assertAlmostEqual(self.product.standard_price, 101.67)
+        purchase_import.line_ids.purchase_rate = 0
+        self.assertAlmostEqual(self.product.standard_price, 101.67)
+
     def test_ready_requires_vendor(self):
         purchase_import = self._new_import()
         purchase_import.line_ids = [(0, 0, {

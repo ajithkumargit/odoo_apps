@@ -611,7 +611,7 @@ class ShopPurchaseImport(models.Model):
         if extracted_data.get("notes"):
             values["note"] = extracted_data["notes"]
 
-        self.write(values)
+        self.with_context(shop_bill_cost_defer=True).write(values)
         self.action_match_products()
 
     def action_extract_bill(self):
@@ -700,6 +700,7 @@ class ShopPurchaseImport(models.Model):
                     })
 
             rec.state = "review"
+            rec.line_ids._sync_matched_bill_costs()
         return True
 
     def action_create_missing_products(self):
@@ -1088,6 +1089,7 @@ class ShopPurchaseImportLine(models.Model):
         lines._connect_bill_name_to_product()
         for line in lines.filtered(lambda item: item.product_id and item.vendor_id):
             line._create_or_update_supplierinfo(line.product_id)
+        lines._sync_matched_bill_costs()
         return lines
 
     def write(self, vals):
@@ -1100,7 +1102,16 @@ class ShopPurchaseImportLine(models.Model):
         }.intersection(vals):
             for line in self.filtered(lambda item: item.product_id and item.vendor_id):
                 line._create_or_update_supplierinfo(line.product_id)
+        if {'product_id', 'import_id', 'quantity', 'purchase_rate', 'discount_percent',
+            'tax_ids', 'units_per_purchase_qty', 'total_amount'}.intersection(vals):
+            self._sync_matched_bill_costs()
         return result
+
+    def _sync_matched_bill_costs(self):
+        if self.env.context.get('shop_bill_cost_defer'):
+            return
+        for line in self.filtered(lambda item: item.product_id and item.import_id.state in ('review', 'ready', 'po_created')):
+            line._sync_product_cost(line.product_id)
 
     def _effective_purchase_price(self):
         self.ensure_one()
