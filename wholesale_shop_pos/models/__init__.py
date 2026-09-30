@@ -7,6 +7,7 @@ from . import price_history
 from . import product_product
 from . import product_creation_wizard
 from . import purchase_order
+from . import stock_move
 
 from . import product_manual_sale_price
 from . import product_weight_pricing

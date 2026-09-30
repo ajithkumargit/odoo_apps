@@ -347,6 +347,21 @@ class TestPurchaseImportExtraction(TransactionCase):
         line._sync_product_cost(self.product)
         self.assertAlmostEqual(self.product.with_company(line.company_id).standard_price, 10.62)
 
+    def test_imported_bag_uses_base_quantity_and_unit_price(self):
+        self.product.uom_id = self.env.ref('uom.product_uom_kgm')
+        bill = self.env['shop.purchase.import'].create({
+            'vendor_id': self.vendor.id, 'state': 'ready',
+            'line_ids': [(0, 0, {'product_id': self.product.id, 'raw_description': 'Sugar bag',
+                'quantity': 1, 'purchase_rate': 2450, 'units_per_purchase_qty': 50,
+                'uom_id': self.product.uom_id.id, 'tax_ids': [(5, 0, 0)]})],
+        })
+        bill.action_create_purchase_order()
+        line = bill.purchase_order_id.order_line
+        self.assertEqual(line.product_qty, 50)
+        self.assertEqual(line.price_unit, 49)
+        self.assertEqual(line.price_total, 2450)
+        self.assertEqual(self.product.standard_price, 49)
+
     def test_edit_total_updates_rate_and_preserves_reviewed_inputs(self):
         purchase_import = self.env["shop.purchase.import"].create({
             "vendor_id": self.vendor.id,

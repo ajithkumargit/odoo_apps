@@ -4,6 +4,16 @@ from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
 
+class PurchaseOrderLine(models.Model):
+    _inherit = 'purchase.order.line'
+
+    def write(self, vals):
+        result = super().write(vals)
+        if {'price_unit', 'discount', 'tax_ids', 'product_uom_id'}.intersection(vals):
+            self.move_ids._shop_sync_received_purchase_cost()
+        return result
+
+
 class PurchaseOrder(models.Model):
     _inherit = "purchase.order"
 

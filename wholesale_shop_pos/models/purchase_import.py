@@ -847,13 +847,17 @@ class ShopPurchaseImport(models.Model):
         for line in self.line_ids:
             qty = line.quantity or 0.0
             effective_price = line._effective_purchase_price()
+            purchase_uom = line.uom_id or line.product_id.uom_id
+            # OCR quantities count bags/boxes. When the PO uses the product's
+            # base unit, express both quantity and rate in that base unit.
+            units = (line.units_per_purchase_qty or 1.0) if purchase_uom == line.product_id.uom_id else 1.0
             base_vals = {
                 "order_id": order.id,
                 "product_id": line.product_id.id,
                 "name": line.raw_description or line.product_id.display_name,
-                "product_qty": qty,
-                "product_uom_id": (line.uom_id or line.product_id.uom_id).id,
-                "price_unit": effective_price,
+                "product_qty": qty * units,
+                "product_uom_id": purchase_uom.id,
+                "price_unit": effective_price / units,
                 "date_planned": fields.Datetime.now(),
                 "tax_ids": [(6, 0, line.tax_ids.ids)],
             }
@@ -866,7 +870,7 @@ class ShopPurchaseImport(models.Model):
                     "name": _("%s (Free Qty)") % (
                         line.raw_description or line.product_id.display_name
                     ),
-                    "product_qty": line.free_quantity,
+                    "product_qty": line.free_quantity * units,
                     "price_unit": 0.0,
                 })
                 PurchaseOrderLine.create(free_vals)

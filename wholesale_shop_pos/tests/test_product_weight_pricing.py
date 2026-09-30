@@ -77,6 +77,43 @@ class TestProductWeightPricing(TransactionCase):
         for name, expected in [('250 gm', 250), ('0.5 kg', 500), ('125g', 125), ('Large', 0)]:
             self.assertEqual(grams_from_name(name), expected)
 
+    def test_regular_purchase_receipt_updates_kg_and_all_variants(self):
+        self.template.write({'uom_id': self.env.ref('uom.product_uom_kgm').id, 'is_storable': True})
+        self.template.shop_sale_price_per_kg = 56
+        vendor = self.env['res.partner'].create({'name': 'Sugar purchase supplier'})
+        product = self.template.product_variant_ids.filtered(lambda p: p.shop_variant_weight_grams == 1000)
+        order = self.env['purchase.order'].create({
+            'partner_id': vendor.id,
+            'order_line': [Command.create({'product_id': product.id, 'name': 'Sugar 50kg',
+                'product_qty': 50, 'product_uom_id': product.uom_id.id, 'price_unit': 49,
+                'tax_ids': [Command.clear()]})],
+        })
+        self.assertEqual(order.amount_total, 2450)
+        order.button_confirm()
+        self.assertEqual(self.template.shop_cost_per_kg, 80)
+        for receipt in order.picking_ids:
+            receipt.action_assign()
+            for move in receipt.move_ids:
+                move.quantity = move.product_uom_qty
+            receipt.with_context(skip_backorder=True).button_validate()
+        self.assertEqual(self.template.shop_cost_per_kg, 49)
+        self.assertEqual(self.template.standard_price, 49)
+        for variant in self.template.product_variant_ids:
+            self.assertEqual(variant.standard_price, 49)
+            self.assertEqual(variant.lst_price, 56)
+        self.assertEqual(product.qty_available, 50)
+        order.order_line.price_unit = 48
+        self.assertEqual(self.template.shop_cost_per_kg, 48)
+        for variant in self.template.product_variant_ids:
+            self.assertEqual(variant.standard_price, 48)
+            self.assertEqual(variant.lst_price, 56)
+        tax = self.env['account.tax'].create({'name': 'Receipt test 10%', 'amount': 10,
+            'amount_type': 'percent', 'type_tax_use': 'purchase', 'company_id': self.env.company.id})
+        order.order_line.write({'discount': 10, 'tax_ids': [Command.set(tax.ids)]})
+        self.assertAlmostEqual(self.template.shop_cost_per_kg, 47.52)
+        order.order_line.price_unit = 0
+        self.assertAlmostEqual(self.template.shop_cost_per_kg, 47.52)
+
     def test_variant_form_saves_weight_settings_atomically(self):
         self.template.shop_price_by_weight = False
         self.template.shop_cost_per_kg = 0
