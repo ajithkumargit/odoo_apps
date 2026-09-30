@@ -231,7 +231,11 @@ class ProductTemplate(models.Model):
             if self - weighted:
                 (self - weighted).write(vals)
             return True
+        changed_cost = weighted.filtered(lambda template:
+            'shop_cost_per_kg' in vals and template.shop_cost_per_kg != vals['shop_cost_per_kg'])
         result = super(ProductTemplate, self.with_context(shop_weight_defer=True)).write(vals)
+        if not {'list_price', 'shop_sale_price_per_kg'}.intersection(vals):
+            changed_cost.filtered(lambda template: template.shop_profit_percent > 0)._apply_shop_profit_price()
         if {'shop_price_by_weight', 'shop_weight_attribute_id', 'shop_cost_per_kg', 'list_price',
             'shop_sale_price_per_kg', 'shop_profit_percent', 'attribute_line_ids', 'uom_id'}.intersection(vals):
             self._sync_shop_weight_prices()

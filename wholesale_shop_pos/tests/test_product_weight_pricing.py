@@ -167,7 +167,7 @@ class TestProductWeightPricing(TransactionCase):
         variant.write({'shop_variant_profit_percent': 30, 'lst_price': 64})
         self.assertEqual(variant.lst_price, 64)
         self.template.shop_cost_per_kg = 55
-        self.assertEqual(variant.lst_price, 64)
+        self.assertAlmostEqual(variant.lst_price, 71.5)
 
     def test_restore_kg_cost_from_bill_for_original_archived_variant(self):
         template = self.env['product.template'].create({
@@ -234,7 +234,25 @@ class TestProductWeightPricing(TransactionCase):
         self.assertAlmostEqual(variant.shop_weight_sale_amount, 15)
         self.assertAlmostEqual(self.template.list_price, 60)
         self.template.shop_cost_per_kg = 52
-        self.assertAlmostEqual(variant.shop_weight_sale_amount, 15)
+        self.assertAlmostEqual(variant.lst_price, 61.18)
+
+    def test_cost_change_reprices_only_enabled_weights_with_profit(self):
+        other = self.env['product.product'].create({'name': 'Separate VVD product',
+            'standard_price': 8, 'list_price': 10})
+        self.template.shop_profit_percent = 20
+        self.template.shop_cost_per_kg = 49
+        self.assert_prices(49, 58.8)
+        for variant in self.template.product_variant_ids:
+            self.assertAlmostEqual(variant.shop_weight_cost_amount,
+                variant.standard_price, places=2)
+        self.assertEqual(other.standard_price, 8)
+        self.assertEqual(other.lst_price, 10)
+        self.template.write({'shop_cost_per_kg': 50, 'list_price': 65})
+        self.assert_prices(50, 65)
+        self.template.shop_profit_percent = 0
+        self.template.list_price = 66
+        self.template.shop_cost_per_kg = 51
+        self.assert_prices(51, 66)
 
     def test_loose_weight_keeps_cost_and_price_per_kg(self):
         self.template.uom_id = self.env.ref('uom.product_uom_kgm')

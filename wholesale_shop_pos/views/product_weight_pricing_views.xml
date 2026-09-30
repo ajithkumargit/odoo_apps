@@ -21,7 +21,7 @@
                         Add weights under Attributes &amp; Variants, using names such as 100g, 250g, 500g, 750g or 1kg.
                         With kg as the unit, cost and price stay per kg; selecting a weight in POS sets its kg quantity (250g = 0.25 kg).
                         With Units, each variant is one pack and cost and price are the kg amount × grams ÷ 1000.
-                        Changing Cost / kg updates pack costs; change Sales Price / kg or Profit % to change selling prices.
+                        Changing Cost / kg updates costs for each weight. When Profit % is positive, it also recalculates selling prices; with zero Profit %, selling prices stay unchanged.
                     </div>
                 </group>
             </xpath>
