@@ -449,6 +449,35 @@ class TestPurchaseImportExtraction(TransactionCase):
         with self.assertRaisesRegex(UserError, "positive quantity"):
             line.total_amount = 100
 
+    def test_edit_calculated_bill_amounts_updates_rate(self):
+        purchase_import = self.env["shop.purchase.import"].create({
+            "vendor_id": self.vendor.id,
+            "state": "review",
+            "line_ids": [(0, 0, {
+                "raw_description": "Editable calculated amounts",
+                "product_id": self.product.id,
+                "quantity": 2,
+                "purchase_rate": 100,
+                "units_per_purchase_qty": 20,
+                "tax_ids": [(6, 0, self.purchase_tax.ids)],
+            })],
+        })
+        line = purchase_import.line_ids
+        line.purchase_unit_price_incl_tax = 262.40
+        self.assertAlmostEqual(line.purchase_unit_price_incl_tax, 262.40, places=2)
+        self.assertAlmostEqual(line.item_unit_cost_incl_tax, 13.12, places=2)
+        line.item_unit_cost_incl_tax = 14.50
+        self.assertAlmostEqual(line.item_unit_cost_incl_tax, 14.50, places=2)
+        self.assertAlmostEqual(line.purchase_unit_price_incl_tax, 290, places=2)
+        line.taxable_amount = 600
+        self.assertAlmostEqual(line.taxable_amount, 600, places=2)
+        self.assertAlmostEqual(purchase_import.untaxed_amount, 600, places=2)
+        purchase_import.state = "po_created"
+        line.total_amount = 700
+        self.assertAlmostEqual(line.total_amount, 700, places=2)
+        self.assertEqual(line.quantity, 2)
+        self.assertEqual(line.units_per_purchase_qty, 20)
+
     def test_reviewed_po_preserves_selected_tax_over_ocr_rate(self):
         purchase_import = self.env["shop.purchase.import"].create({
             "vendor_id": self.vendor.id,

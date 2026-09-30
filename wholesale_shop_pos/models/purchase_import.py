@@ -1055,7 +1055,7 @@ class ShopPurchaseImportLine(models.Model):
         help="Optional confidence supplied by OCR/document extraction.",
     )
 
-    taxable_amount = fields.Monetary(compute="_compute_amounts", store=True, currency_field="currency_id")
+    taxable_amount = fields.Monetary(compute="_compute_amounts", inverse="_inverse_taxable_amount", store=True, currency_field="currency_id")
     tax_amount = fields.Monetary(compute="_compute_amounts", store=True, currency_field="currency_id")
     total_amount = fields.Monetary(
         string="Total Cost (Incl. Tax)",
@@ -1068,6 +1068,7 @@ class ShopPurchaseImportLine(models.Model):
     purchase_unit_price_incl_tax = fields.Monetary(
         string="Unit Price (Incl. Tax)",
         compute="_compute_amounts",
+        inverse="_inverse_purchase_unit_price_incl_tax",
         store=True,
         currency_field="currency_id",
         help="Cost of one purchased quantity after discount and including tax.",
@@ -1075,6 +1076,7 @@ class ShopPurchaseImportLine(models.Model):
     item_unit_cost_incl_tax = fields.Monetary(
         string="Per-Item Cost (Incl. Tax)",
         compute="_compute_amounts",
+        inverse="_inverse_item_unit_cost_incl_tax",
         store=True,
         currency_field="currency_id",
         help=(
@@ -1360,38 +1362,58 @@ class ShopPurchaseImportLine(models.Model):
                     )
 
     def _inverse_total_amount(self):
+        self._set_purchase_rate_from_amount("total_amount")
+
+    def _inverse_taxable_amount(self):
+        self._set_purchase_rate_from_amount("taxable_amount")
+
+    def _inverse_purchase_unit_price_incl_tax(self):
+        self._set_purchase_rate_from_amount("purchase_unit_price_incl_tax")
+
+    def _inverse_item_unit_cost_incl_tax(self):
+        self._set_purchase_rate_from_amount("item_unit_cost_incl_tax")
+
+    def _set_purchase_rate_from_amount(self, amount_field):
+        """Adjust the purchase rate so an edited derived amount remains consistent."""
         for line in self:
-            target = line.total_amount
-            if line.import_id.state not in ("draft", "review"):
-                raise ValidationError(_("Only uploaded or review bill totals can be edited."))
+            target = line[amount_field]
             if target < 0:
-                raise ValidationError(_("Line total cannot be negative."))
+                raise ValidationError(_("Bill line amounts cannot be negative."))
             discount_factor = 1 - line.discount_percent / 100.0
             if line.quantity <= 0 or discount_factor <= 0:
-                raise ValidationError(_("Set a positive quantity and a discount below 100% before editing the total."))
+                raise ValidationError(_("Set a positive quantity and a discount below 100% before editing an amount."))
+            if amount_field == "item_unit_cost_incl_tax" and line.units_per_purchase_qty <= 0:
+                raise ValidationError(_("Set Units in One Qty above zero before editing Per-Item Cost."))
 
-            def total_at(rate, raw=False):
+            def amount_at(rate, raw=False):
+                quantity = line.quantity if amount_field in ("total_amount", "taxable_amount") else 1.0
                 if not line.tax_ids:
-                    return rate * discount_factor * line.quantity
-                return line.tax_ids.with_context(round_base=not raw).compute_all(
-                    rate * discount_factor, currency=line.currency_id,
-                    quantity=line.quantity, product=line.product_id,
-                    partner=line.vendor_id,
-                    rounding_method="round_globally" if raw else None,
-                )["total_included"]
+                    amount = rate * discount_factor * quantity
+                else:
+                    taxes = line.tax_ids.with_context(round_base=not raw).compute_all(
+                        rate * discount_factor, currency=line.currency_id,
+                        quantity=quantity, product=line.product_id,
+                        partner=line.vendor_id,
+                        rounding_method="round_globally" if raw else None,
+                    )
+                    key = "total_excluded" if amount_field == "taxable_amount" else "total_included"
+                    amount = taxes[key]
+                if amount_field == "item_unit_cost_incl_tax":
+                    amount /= line.units_per_purchase_qty
+                return amount
 
             # Two positive samples include fixed, grouped and price-included
             # taxes without treating every tax as a simple percentage.
-            first, second = total_at(1, True), total_at(2, True)
+            first, second = amount_at(1, True), amount_at(2, True)
             slope = second - first
             if slope <= 0:
                 raise ValidationError(_("These taxes do not support adjusting the total. Edit the purchase rate instead."))
             rate = max(0, (target - (first - slope)) / slope)
             low, high = 0, max(1, rate * 2)
-            while total_at(high) < target and high < 1e12:
+            while amount_at(high) < target and high < 1e12:
                 high *= 2
             for attempt in range(60):
-                actual = total_at(rate)
+                actual = amount_at(rate)
                 if line.currency_id.compare_amounts(actual, target) == 0:
                     break
                 if actual < target:
@@ -1400,7 +1422,7 @@ class ShopPurchaseImportLine(models.Model):
                     high = rate
                 rate = (low + high) / 2
             else:
-                raise ValidationError(_("This total cannot be reached with the selected quantity, discount and taxes."))
+                raise ValidationError(_("This amount cannot be reached with the selected quantity, discount and taxes."))
             line.purchase_rate = rate
             line._compute_amounts()
 

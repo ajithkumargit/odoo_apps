@@ -156,10 +156,10 @@
                                     <field name="discount_percent" optional="show"/>
                                     <field name="gst_percent" optional="show"/>
                                     <field name="tax_ids" widget="many2many_tags"/>
-                                    <field name="purchase_unit_price_incl_tax" readonly="1" optional="show"/>
+                                    <field name="purchase_unit_price_incl_tax" optional="show"/>
                                     <field name="units_per_purchase_qty" optional="show"/>
-                                    <field name="item_unit_cost_incl_tax" readonly="1" optional="show"/>
-                                    <field name="taxable_amount" readonly="1"/>
+                                    <field name="item_unit_cost_incl_tax" optional="show"/>
+                                    <field name="taxable_amount"/>
                                     <field name="tax_amount" readonly="1" optional="hide"/>
                                     <field name="total_amount"/>
                                     <field name="extraction_confidence" optional="hide"/>
@@ -185,9 +185,10 @@
                                         <field name="discount_percent"/>
                                         <field name="gst_percent"/>
                                         <field name="tax_ids" widget="many2many_tags"/>
-                                        <field name="purchase_unit_price_incl_tax" readonly="1"/>
+                                        <field name="purchase_unit_price_incl_tax"/>
                                         <field name="units_per_purchase_qty"/>
-                                        <field name="item_unit_cost_incl_tax" readonly="1"/>
+                                        <field name="item_unit_cost_incl_tax"/>
+                                        <field name="taxable_amount"/>
                                         <field name="total_amount"/>
                                     </group>
                                 </form>
