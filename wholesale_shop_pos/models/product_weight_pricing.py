@@ -372,10 +372,32 @@ class ProductProduct(models.Model):
             # Delegated template fields and computed-field inverses are written
             # in separate steps. Validate only after the entire form is saved.
             updates = dict(vals)
+            # Do not let computed amount inverses run alongside delegated
+            # attribute/enable fields: those fields can be protected in cache
+            # and temporarily read as False during Odoo's inverse phase.
+            sale_amount = updates.pop('shop_weight_sale_amount', None)
+            cost_amount = updates.pop('shop_weight_cost_amount', None)
             if 'shop_cost_per_kg' in updates:
                 updates.pop('standard_price', None)
-                updates.pop('shop_weight_cost_amount', None)
-            result = self.with_context(shop_weight_atomic=True).write(updates)
+                cost_amount = None
+            batch = self.with_context(shop_weight_atomic=True)
+            result = batch.write(updates) if updates else True
+            if sale_amount is not None or cost_amount is not None:
+                for product in batch:
+                    values = product.product_template_attribute_value_ids.filtered(
+                        lambda value: value.attribute_id == product.shop_weight_attribute_id)
+                    grams = values.product_attribute_value_id.shop_weight_grams if len(values) == 1 else 0
+                    if not product.shop_price_by_weight or grams <= 0:
+                        raise ValidationError(_('Select a Weight Attribute with a positive weight value before setting weight amounts.'))
+                    ratio = grams / 1000
+                    prices = {}
+                    if cost_amount is not None:
+                        prices['shop_cost_per_kg'] = cost_amount / ratio
+                    if sale_amount is not None and not {'list_price', 'shop_sale_price_per_kg'}.intersection(updates):
+                        extra = product.price_extra * (ratio if product.shop_loose_weight else 1)
+                        prices['list_price'] = (sale_amount - extra) / ratio
+                    if prices:
+                        product.product_tmpl_id.write(prices)
             self.product_tmpl_id._sync_shop_weight_prices()
             return result
         weighted = self.filtered('shop_price_by_weight')

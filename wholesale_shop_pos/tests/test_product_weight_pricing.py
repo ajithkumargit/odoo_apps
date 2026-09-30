@@ -1,5 +1,6 @@
 from odoo import Command
 from odoo.tests.common import TransactionCase
+from odoo.tests import Form
 from odoo.exceptions import ValidationError
 
 from ..models.product_weight_pricing import grams_from_name
@@ -93,6 +94,20 @@ class TestProductWeightPricing(TransactionCase):
         variant.write({'shop_weight_sale_amount': 15, 'shop_cost_per_kg': 48})
         self.assertAlmostEqual(variant.standard_price, 12)
         self.assertAlmostEqual(variant.lst_price, 15)
+
+    def test_browser_form_enables_weight_with_amount_fields(self):
+        self.template.shop_price_by_weight = False
+        variant = self.template.product_variant_ids.filtered(lambda p: p.shop_variant_weight_grams == 1000)
+        self.template.write({'shop_cost_per_kg': 0, 'shop_weight_attribute_id': False})
+        with Form(variant, view='product.product_normal_form_view') as form:
+            form.shop_price_by_weight = True
+            form.shop_weight_attribute_id = self.attribute
+            form.shop_cost_per_kg = 46.15
+            form.shop_sale_price_per_kg = 52
+            form.shop_weight_sale_amount = 52
+        self.assertAlmostEqual(variant.standard_price, 46.15)
+        self.assertAlmostEqual(variant.lst_price, 52)
+        self.assertAlmostEqual(variant.shop_variant_weight_grams, 1000)
 
     def test_edit_cost_and_sale_fields_without_readonly_guards(self):
         self.template.uom_id = self.env.ref('uom.product_uom_kgm')
