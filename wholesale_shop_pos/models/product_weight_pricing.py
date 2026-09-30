@@ -95,8 +95,31 @@ class ProductTemplate(models.Model):
         return self.env['shop.purchase.import.line'].search(domain, order='id desc').sorted(
             key=lambda line: (str(line.import_id.bill_date or ''), line.id), reverse=True)[:1]
 
+    def _update_shop_regular_bill_prices(self, variants=False):
+        self.ensure_one()
+        variants = variants or self.product_variant_ids
+        updated = False
+        for variant in variants:
+            lines = self.env['shop.purchase.import.line'].search([
+                ('product_id', '=', variant.id),
+                ('company_id', '=', self.env.company.id),
+                ('import_id.state', 'in', ('review', 'ready', 'po_created')),
+                '|', ('import_id.purchase_order_id', '=', False),
+                ('import_id.purchase_order_id.state', '!=', 'cancel'),
+            ]).filtered(lambda line: line.item_unit_cost_incl_tax > 0 or line.mrp > 0)
+            line = lines.sorted(
+                key=lambda item: (str(item.import_id.bill_date or ''), item.id), reverse=True)[:1]
+            if line:
+                line._sync_product_cost(variant)
+                updated = True
+        if not updated:
+            raise ValidationError(_('No reviewed bill cost or MRP was found for this product.'))
+        return True
+
     def action_update_cost_from_bill(self):
         self.ensure_one()
+        if not self.shop_price_by_weight:
+            return self._update_shop_regular_bill_prices()
         line = self._latest_shop_cost_bill_line()
         if not line:
             raise ValidationError(_('No positive Per-Item Cost was found in a purchase-order-created bill for this product and company.'))
@@ -264,6 +287,8 @@ class ProductProduct(models.Model):
 
     def action_update_cost_from_bill(self):
         self.ensure_one()
+        if not self.shop_price_by_weight:
+            return self.product_tmpl_id._update_shop_regular_bill_prices(self)
         if self.uom_id == self.env.ref('uom.product_uom_kgm'):
             return self.product_tmpl_id.action_update_cost_from_bill()
         line = self.product_tmpl_id._latest_shop_cost_bill_line(product=self)

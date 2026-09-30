@@ -36,3 +36,11 @@ class StockMove(models.Model):
                 product.product_tmpl_id.shop_cost_per_kg = cost
             else:
                 product.standard_price = cost
+                if not product.shop_price_by_weight:
+                    profit = product.shop_variant_profit_percent
+                    if not profit and product.product_tmpl_id.product_variant_count <= 1:
+                        profit = product.product_tmpl_id.shop_profit_percent
+                    if profit > 0:
+                        sale = product.currency_id.round(cost * (1 + profit / 100))
+                        if product.currency_id.compare_amounts(product.shop_variant_sale_price, sale):
+                            product._set_shop_sale_price(sale)

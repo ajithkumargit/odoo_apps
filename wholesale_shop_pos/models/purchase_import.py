@@ -229,6 +229,8 @@ class ShopPurchaseImport(models.Model):
         if vals.get("vendor_id"):
             self.env["res.partner"].browse(vals["vendor_id"])._mark_as_shop_vendor()
         result = super().write(vals)
+        if {'state', 'line_ids'}.intersection(vals) and not self.env.context.get('shop_bill_cost_defer'):
+            self.filtered(lambda record: record.state in ('review', 'ready', 'po_created')).line_ids._sync_matched_bill_costs()
         if {"vendor_id", "company_id"}.intersection(vals):
             for rec in self.filtered("vendor_id"):
                 self.env["shop.bill.ocr.template"].ensure_for_vendor(
@@ -1028,7 +1030,7 @@ class ShopPurchaseImportLine(models.Model):
     purchase_rate = fields.Float(digits=(16, 6))
     mrp = fields.Monetary(
         string="MRP", currency_field="currency_id",
-        help="Printed maximum retail price per sale unit, including taxes. Does not change the bill total.",
+        help="Printed maximum retail price per sale unit, including taxes. For matched regular products with zero Profit %, a reviewed bill sets Sales Price to this MRP. It does not change the bill total.",
     )
     discount_percent = fields.Float(string="Discount %", default=0.0)
     units_per_purchase_qty = fields.Float(
@@ -1116,7 +1118,7 @@ class ShopPurchaseImportLine(models.Model):
             for line in self.filtered(lambda item: item.product_id and item.vendor_id):
                 line._create_or_update_supplierinfo(line.product_id)
         if {'product_id', 'import_id', 'quantity', 'purchase_rate', 'discount_percent',
-            'tax_ids', 'units_per_purchase_qty', 'total_amount'}.intersection(vals):
+            'tax_ids', 'units_per_purchase_qty', 'total_amount', 'mrp'}.intersection(vals):
             self._sync_matched_bill_costs()
         return result
 
@@ -1196,23 +1198,49 @@ class ShopPurchaseImportLine(models.Model):
             SupplierInfo.create(values)
 
     def _sync_product_cost(self, product):
-        """Keep the product cost aligned with the reviewed supplier-bill cost."""
+        """Apply reviewed per-item cost and the selected non-weight sale rule."""
         self.ensure_one()
         if not product:
             return
-        cost = self._initial_cost_in_company_currency()
-        # Empty OCR rates and free lines must never erase an established cost.
-        if cost <= 0:
-            return
         product = product.with_company(self.company_id)
-        if product.shop_price_by_weight and (
-                product.uom_id == self.env.ref('uom.product_uom_kgm') or
-                (not product.active and not product.product_template_attribute_value_ids)):
-            # Historical bulk bills can refer to the original unweighted product.
-            # Its per-item cost is the kg basis, even if packs now use Units.
-            product.product_tmpl_id.shop_cost_per_kg = cost
+        cost = self._initial_cost_in_company_currency()
+        # Blank/free OCR rates must never erase a recorded product cost.
+        if cost > 0:
+            if product.shop_price_by_weight and (
+                    product.uom_id == self.env.ref('uom.product_uom_kgm') or
+                    (not product.active and not product.product_template_attribute_value_ids)):
+                product.product_tmpl_id.shop_cost_per_kg = cost
+            else:
+                product.standard_price = cost
+        if product.shop_price_by_weight:
+            return
+
+        # Bill MRP is in the bill currency; POS prices use the company currency.
+        mrp = self.mrp
+        if mrp > 0 and self.currency_id != self.company_id.currency_id:
+            mrp = self.currency_id._convert(
+                mrp, self.company_id.currency_id, self.company_id,
+                self.import_id.bill_date or fields.Date.context_today(self))
+        # A denomination such as "10rs" makes an OCR value like 1000
+        # unambiguous. Keep the cost, but never turn that OCR error into price.
+        denomination = re.search(r'(?<!\d)(\d+(?:\.\d+)?)\s*rs\b', product.display_name, re.I)
+        if denomination and mrp > float(denomination.group(1)) + product.currency_id.rounding:
+            _logger.warning('Skipping implausible bill MRP for product %s on import line %s', product.id, self.id)
+            mrp = 0.0
+        if mrp > 0:
+            product.shop_mrp = mrp
+
+        profit = product.shop_variant_profit_percent
+        if not profit and product.product_tmpl_id.product_variant_count <= 1:
+            profit = product.product_tmpl_id.shop_profit_percent
+        if profit > 0 and cost > 0:
+            price = product.currency_id.round(cost * (1 + profit / 100))
+        elif profit <= 0 and mrp > 0:
+            price = mrp
         else:
-            product.standard_price = cost
+            return
+        if product.currency_id.compare_amounts(product.shop_variant_sale_price, price):
+            product._set_shop_sale_price(price)
 
     def _attach_created_product(
         self,

@@ -301,7 +301,7 @@ class ProductProduct(models.Model):
         currency_field="currency_id",
         compute="_compute_shop_variant_sale_price",
         inverse="_inverse_shop_variant_sale_price",
-        help="Editable variant price. Cost changes do not overwrite a manually set price.",
+        help="Editable variant price. Direct cost edits preserve manual prices; reviewed supplier bills use MRP when Profit % is zero, or recalculate from a positive Profit %.",
     )
     shop_variant_price_check = fields.Monetary(
         string="Variant Price to Check",

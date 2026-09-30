@@ -47,6 +47,28 @@ class TestManualSalePrice(TransactionCase):
         p.write({'standard_price': 200})
         self.assertEqual(p.lst_price, 177.77)
 
+    def test_regular_purchase_receipt_uses_positive_variant_profit(self):
+        product = self.env['product.product'].create({
+            'name': 'Regular purchased pack', 'is_storable': True,
+            'standard_price': 100, 'shop_variant_profit_percent': 20})
+        vendor = self.env['res.partner'].create({'name': 'Regular supplier'})
+        order = self.env['purchase.order'].create({
+            'partner_id': vendor.id,
+            'order_line': [(0, 0, {'product_id': product.id,
+                'product_qty': 1, 'product_uom_id': product.uom_id.id,
+                'price_unit': 120, 'tax_ids': [(5, 0, 0)]})],
+        })
+        order.button_confirm()
+        for picking in order.picking_ids:
+            for move in picking.move_ids:
+                move.quantity = move.product_uom_qty
+            picking.with_context(skip_backorder=True).button_validate()
+        self.assertEqual(product.standard_price, 120)
+        self.assertEqual(product.lst_price, 144)
+        order.order_line.price_unit = 130
+        self.assertEqual(product.standard_price, 130)
+        self.assertEqual(product.lst_price, 156)
+
     def test_six_decimal_percentage(self):
         p = self.env['product.template'].create({'name': 'Precise percent', 'standard_price': 81.89})
         p.shop_profit_percent = 22.114971

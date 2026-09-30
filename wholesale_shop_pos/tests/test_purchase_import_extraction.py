@@ -50,6 +50,66 @@ class TestPurchaseImportExtraction(TransactionCase):
             "original_file_name": "bill.png",
         })
 
+    def test_existing_regular_variant_gets_bill_cost_and_mrp_sale_on_review(self):
+        attribute = self.env['product.attribute'].create({'name': 'Regular pack size'})
+        values = self.env['product.attribute.value'].create([
+            {'attribute_id': attribute.id, 'name': '2rs'},
+            {'attribute_id': attribute.id, 'name': '5rs'},
+        ])
+        template = self.env['product.template'].create({
+            'name': 'Regular tea', 'list_price': 9.99,
+            'attribute_line_ids': [(0, 0, {'attribute_id': attribute.id,
+                'value_ids': [(6, 0, values.ids)]})],
+        })
+        small = template.product_variant_ids.filtered(
+            lambda product: '2rs' in product.product_template_attribute_value_ids.product_attribute_value_id.mapped('name'))
+        other = template.product_variant_ids - small
+        bill = self._new_import()
+        bill.vendor_id = self.vendor
+        line = self.env['shop.purchase.import.line'].create({
+            'import_id': bill.id, 'product_id': small.id,
+            'raw_description': 'REGULAR TEA 2', 'quantity': 10,
+            'purchase_rate': 1.74, 'mrp': 2.0,
+        })
+        self.assertEqual(small.standard_price, 0)
+        bill.state = 'review'
+        self.assertEqual(small.standard_price, 1.74)
+        self.assertEqual(small.shop_mrp, 2)
+        self.assertEqual(small.lst_price, 2)
+        self.assertEqual(other.standard_price, 0)
+        original_other_sale = other.lst_price
+        line.write({'purchase_rate': 1.85, 'mrp': 2.1})
+        self.assertEqual(small.standard_price, 1.85)
+        # A price above the printed 2rs denomination must not be used.
+        self.assertEqual(small.lst_price, 2)
+        self.assertEqual(other.lst_price, original_other_sale)
+        small.shop_variant_profit_percent = 20
+        line.purchase_rate = 1.5
+        self.assertEqual(small.standard_price, 1.5)
+        self.assertEqual(small.lst_price, 1.8)
+        small.write({'standard_price': 77, 'lst_price': 99})
+        small.action_update_cost_from_bill()
+        self.assertEqual(small.standard_price, 1.5)
+        self.assertEqual(small.lst_price, 1.8)
+        line.write({'purchase_rate': 0, 'mrp': 2})
+        self.assertEqual(small.standard_price, 1.5)
+        self.assertEqual(small.lst_price, 1.8)
+
+    def test_regular_existing_product_mrp_sale_with_zero_cost(self):
+        product = self.env['product.product'].create({
+            'name': 'Existing soap', 'standard_price': 8, 'list_price': 1})
+        bill = self._new_import()
+        bill.vendor_id = self.vendor
+        line = self.env['shop.purchase.import.line'].create({
+            'import_id': bill.id, 'product_id': product.id,
+            'raw_description': 'Existing soap', 'purchase_rate': 0, 'mrp': 10})
+        bill.state = 'review'
+        self.assertEqual(product.standard_price, 8)
+        self.assertEqual(product.lst_price, 10)
+        line.write({'purchase_rate': 7, 'mrp': 12})
+        self.assertEqual(product.standard_price, 7)
+        self.assertEqual(product.lst_price, 12)
+
     def test_partner_roles_default_from_creation_view_context(self):
         vendor = self.env["res.partner"].with_context(
             default_shop_is_vendor=True
