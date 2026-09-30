@@ -845,6 +845,15 @@ class ShopPurchaseImport(models.Model):
         PriceHistory = self.env["shop.product.price.history"]
 
         for line in self.line_ids:
+            product = line.product_id
+            if (product.shop_price_by_weight and not product.active
+                    and not product.product_template_attribute_value_ids):
+                # A reimport can still carry the original product from before
+                # weight variants existed. Receive the new purchase into 1 kg.
+                candidates = product.product_tmpl_id.product_variant_ids.filtered(
+                    lambda variant: variant.shop_variant_weight_grams == 1000)
+                if len(candidates) == 1:
+                    line.product_id = candidates
             qty = line.quantity or 0.0
             effective_price = line._effective_purchase_price()
             purchase_uom = line.uom_id or line.product_id.uom_id
@@ -1196,8 +1205,11 @@ class ShopPurchaseImportLine(models.Model):
         if cost <= 0:
             return
         product = product.with_company(self.company_id)
-        if product.shop_price_by_weight and product.uom_id == self.env.ref('uom.product_uom_kgm'):
-            # Old bills may point to the archived original variant.
+        if product.shop_price_by_weight and (
+                product.uom_id == self.env.ref('uom.product_uom_kgm') or
+                (not product.active and not product.product_template_attribute_value_ids)):
+            # Historical bulk bills can refer to the original unweighted product.
+            # Its per-item cost is the kg basis, even if packs now use Units.
             product.product_tmpl_id.shop_cost_per_kg = cost
         else:
             product.standard_price = cost

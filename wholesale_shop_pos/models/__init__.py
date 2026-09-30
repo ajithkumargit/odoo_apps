@@ -11,6 +11,7 @@ from . import stock_move
 
 from . import product_manual_sale_price
 from . import product_weight_pricing
+from . import product_bulk_stock
 from . import product_price_audit
 
 from . import user_menu_access

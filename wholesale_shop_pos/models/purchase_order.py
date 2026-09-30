@@ -9,8 +9,30 @@ class PurchaseOrderLine(models.Model):
 
     shop_items_per_purchase_unit = fields.Float(
         string='Items in One Purchase Unit', default=1.0,
-        help='Number of base items or kg in one purchased quantity. Example: a bag costing 2450 with 50 items gives a cost of 49 per item/kg. Leave blank or 0 to use 1. This changes product costing, not the order quantity or invoice total.',
+        help='Number of base items or kg in one purchased quantity. Example: a bag costing 2450 with 50 items gives a cost of 49 per item/kg. Leave blank or 0 to use 1. For a new order, confirmation uses a pack unit so receipts contain this many base units and the invoice total stays unchanged. Existing completed receipts are not rewritten.',
     )
+
+    def _shop_prepare_pack_uom(self):
+        # Represent a bag as a real purchase unit. Stock, received quantities,
+        # returns and billing can then use the same standard UoM conversion.
+        for line in self.filtered(lambda line: line.product_id and
+                line.order_id.state in ('draft', 'sent') and
+                line.shop_items_per_purchase_unit > 1 and
+                line.product_uom_id == line.product_id.uom_id and
+                not line.move_ids.filtered(lambda move: move.state == 'done')):
+            base = line.product_id.uom_id
+            count = line.shop_items_per_purchase_unit
+            units = self.env['uom.uom']
+            pack = units.search([
+                ('relative_uom_id', '=', base.id), ('relative_factor', '=', count),
+            ], limit=1)
+            if not pack:
+                pack = units.sudo().create({
+                    'name': '%g %s pack' % (count, base.name),
+                    'relative_uom_id': base.id, 'relative_factor': count,
+                })
+            # Preserve the agreed bag price when changing the purchase unit.
+            line.write({'product_uom_id': pack.id, 'price_unit': line.price_unit})
 
     def write(self, vals):
         result = super().write(vals)
@@ -21,6 +43,10 @@ class PurchaseOrderLine(models.Model):
 
 class PurchaseOrder(models.Model):
     _inherit = "purchase.order"
+
+    def button_confirm(self):
+        self.order_line._shop_prepare_pack_uom()
+        return super().button_confirm()
 
     shop_bill_file = fields.Binary(
         string="Supplier Bill Image/PDF",

@@ -14,6 +14,7 @@
                         <button name="action_load_shop_weight_options" type="object" string="Load Configured Weights"
                                 class="btn-secondary"/>
                     </div>
+                    <field name="shop_bulk_stock_product_id" invisible="not shop_price_by_weight" options="{'no_create': True}"/>
                     <field name="shop_cost_per_kg" invisible="not shop_price_by_weight"/>
                     <div colspan="2"><button name="action_update_cost_from_bill" type="object" string="Update Cost from Bill" class="btn-secondary"/></div>
                     <field name="shop_sale_price_per_kg" invisible="not shop_price_by_weight"/>
@@ -57,6 +58,9 @@
         <field name="model">product.product</field>
         <field name="inherit_id" ref="wholesale_shop_pos.view_product_product_form_wholesale_shop"/>
         <field name="arch" type="xml">
+            <xpath expr="//field[@name='shop_bulk_stock_product_id']" position="attributes">
+                <attribute name="domain">[('product_tmpl_id', '=', product_tmpl_id)]</attribute>
+            </xpath>
             <xpath expr="//field[@name='shop_mrp']" position="before">
                 <field name="shop_variant_weight_grams" invisible="not shop_price_by_weight"/>
             </xpath>
