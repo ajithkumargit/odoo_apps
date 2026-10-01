@@ -18,3 +18,5 @@ from . import user_menu_access
 from . import product_image_search
 from . import product_mrp
 from . import product_pack_prices
+from . import shop_pos_session_access
+from . import shop_public_settings

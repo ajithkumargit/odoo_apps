@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="privilege_shop_pos_session" model="res.groups.privilege">
+        <field name="name">POS Session Visibility</field>
+        <field name="category_id" ref="base.module_category_sales"/>
+        <field name="sequence">22</field>
+    </record>
+    <record id="group_shop_pos_open_sessions_only" model="res.groups">
+        <field name="name">Open Sessions Only</field>
+        <field name="privilege_id" ref="privilege_shop_pos_session"/>
+        <field name="implied_ids" eval="[(4, ref('point_of_sale.group_pos_user'))]"/>
+        <field name="comment">Show only opened POS registers. Administrators remain unrestricted.</field>
+    </record>
+</odoo>

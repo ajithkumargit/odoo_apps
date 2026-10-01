@@ -1,7 +1,7 @@
 {
     "name": "Wholesale Shop POS Core",
     "summary": "Wholesale/retail POS support, purchase bill staging, vendor product mapping and price history",
-    "version": "19.0.1.49.0",
+    "version": "19.0.1.50.0",
     "category": "Sales/Point of Sale",
     "author": "Custom",
     "license": "LGPL-3",
@@ -14,6 +14,7 @@
         "stock",
         "account",
         "point_of_sale",
+        "auth_signup",
     ],
     "external_dependencies": {
         "python": [
@@ -24,6 +25,7 @@
         ],
     },
     "data": [
+        "security/shop_pos_session_groups.xml",
         "security/ir.model.access.csv",
         "views/res_partner_views.xml",
         "views/product_creation_wizard_views.xml",
@@ -36,6 +38,7 @@
         "views/product_views.xml",
         "views/product_weight_pricing_views.xml",
         "views/res_config_settings_views.xml",
+        "views/shop_pos_session_access_views.xml",
         "views/menu_views.xml",
         "views/user_menu_access_views.xml",
         "views/store_branding_views.xml",

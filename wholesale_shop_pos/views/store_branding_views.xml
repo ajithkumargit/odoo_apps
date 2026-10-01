@@ -16,7 +16,11 @@
         <xpath expr="//link[@rel='manifest']" position="replace"/>
     </template>
     <template id="store_login_footer" inherit_id="web.login_layout" priority="90">
-        <xpath expr="//a[contains(@href, 'odoo.com')]" position="replace"/>
+        <xpath expr="//div[@t-if='not disable_footer']" position="replace"/>
+    </template>
+    <template id="store_login_no_database_selector" inherit_id="web.login" priority="90">
+        <xpath expr="//div[@t-if='databases and len(databases) &gt; 1']" position="replace"/>
+        <xpath expr="//button[@value='/web/become']" position="replace"/>
     </template>
     <template id="store_no_promotion" inherit_id="web.brand_promotion" priority="90">
         <xpath expr="//div[hasclass('o_brand_promotion')]" position="replace"/>

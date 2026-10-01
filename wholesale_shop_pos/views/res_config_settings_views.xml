@@ -14,6 +14,20 @@
                             <field name="shop_serpapi_key" password="True" placeholder="Optional SerpAPI key"/>
                         </setting>
                     </block>
+                    <block title="Public Access" name="wholesale_public_access">
+                        <setting id="shop_public_database_tools" string="Public database tools"
+                                 help="Off: only a signed-in Settings administrator can use database manager, selector, list, backup and other database endpoints. The server's dbfilter and list_db settings may further restrict them.">
+                            <field name="shop_allow_public_database_tools"/>
+                        </setting>
+                        <setting id="shop_public_signup" string="Public self-signup"
+                                 help="Off: visitors cannot create their own account. Invitation links continue to work.">
+                            <field name="shop_allow_public_signup"/>
+                        </setting>
+                        <setting id="shop_public_password_reset" string="Public password reset"
+                                 help="Off: visitors cannot request a password reset from the login page. Administrators can manage users in Settings.">
+                            <field name="shop_allow_public_password_reset"/>
+                        </setting>
+                    </block>
                     <block title="Weight Pricing" name="wholesale_weight_pricing">
                         <setting id="shop_weight_options" string="Default weight options"
                                  help="Comma-separated weights used by Load Configured Weights on products. Existing variants are preserved. Any positive gram or kilogram weight is supported.">

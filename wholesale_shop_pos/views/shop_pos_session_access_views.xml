@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_pos_config_kanban_open_sessions_only" model="ir.ui.view">
+        <field name="name">pos.config.kanban.open.sessions.only</field>
+        <field name="model">pos.config</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_config_kanban"/>
+        <field name="arch" type="xml">
+            <xpath expr="//kanban/field[@name='current_session_state']" position="after">
+                <field name="shop_open_sessions_only"/>
+            </xpath>
+            <xpath expr="//button[@name='open_ui']" position="attributes">
+                <attribute name="t-if">record.current_session_state.raw_value != 'closing_control' and (!record.shop_open_sessions_only.raw_value or record.current_session_state.raw_value == 'opened')</attribute>
+            </xpath>
+            <xpath expr="//button[@name='open_existing_session_cb']" position="attributes">
+                <attribute name="t-else"/>
+                <attribute name="t-elif">record.current_session_state.raw_value == 'closing_control' and !record.shop_open_sessions_only.raw_value</attribute>
+            </xpath>
+            <xpath expr="//button[@name='open_existing_session_cb']" position="after">
+                <span t-else="" class="text-muted">No session started</span>
+            </xpath>
+        </field>
+    </record>
+</odoo>
