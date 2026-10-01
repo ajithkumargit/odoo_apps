@@ -18,8 +18,11 @@ class ProductTemplate(models.Model):
     def _inverse_shop_mrp(self):
         for product in self:
             if len(product.product_variant_ids) > 1:
-                raise ValidationError(_('Set MRP on each product variant.'))
-        self._set_product_variant_field('shop_mrp')
+                # Odoo may inverse stored template fields while regenerating
+                # variants after an attribute edit. A multi-variant template
+                # has no single MRP to write back to those variants.
+                continue
+            product._set_product_variant_field('shop_mrp')
 
     def _get_related_fields_variant_template(self):
         return super()._get_related_fields_variant_template() + ['shop_mrp']

@@ -37,8 +37,16 @@ class TestProductMRP(TransactionCase):
         second.shop_mrp = 100
         self.assertEqual(first.shop_mrp, 50)
         self.assertEqual(second.shop_mrp, 100)
-        with self.assertRaises(ValidationError), self.cr.savepoint():
-            template.shop_mrp = 80
+        template.shop_mrp = 80
+        self.assertEqual(first.shop_mrp, 50)
+        self.assertEqual(second.shop_mrp, 100)
+        third = self.env['product.attribute.value'].create({
+            'name': 'Medium', 'attribute_id': attribute.id,
+        })
+        template.attribute_line_ids.write({'value_ids': [(4, third.id)]})
+        self.assertEqual(len(template.product_variant_ids), 3)
+        self.assertEqual(first.shop_mrp, 50)
+        self.assertEqual(second.shop_mrp, 100)
 
     def test_extraction_and_new_product_keep_mrp_separate_from_cost(self):
         values = self.bill._line_values_from_extraction({
