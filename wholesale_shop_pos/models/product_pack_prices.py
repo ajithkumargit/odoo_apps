@@ -29,8 +29,10 @@ class ProductTemplate(models.Model):
     def _inverse_pack_field(self, name):
         for template in self:
             if len(template.product_variant_ids) > 1:
-                raise ValidationError(_('Set box and single-pack values on each product variant.'))
-        self._set_product_variant_field(name)
+                # Attribute edits can inverse stored template fields even
+                # though each variant has its own pack values.
+                continue
+            template._set_product_variant_field(name)
 
     def _inverse_box_price(self):
         self._inverse_pack_field('shop_box_price')
@@ -51,9 +53,7 @@ class ProductTemplate(models.Model):
         # Preserve explicit zero values as well as nonzero prices/quantities.
         for template, values in zip(templates, vals_list):
             pack_values = {name: values[name] for name in PACK_FIELDS if name in values}
-            if pack_values:
-                if len(template.product_variant_ids) > 1:
-                    raise ValidationError(_('Set box and single-pack values on each product variant.'))
+            if pack_values and len(template.product_variant_ids) == 1:
                 template.product_variant_ids.write(pack_values)
         return templates
 

@@ -45,8 +45,14 @@ class TestProductPackPrices(TransactionCase):
         self.assertEqual(first.shop_box_qty, 10)
         self.assertEqual(first.shop_single_pack_price, 40)
         self.assertEqual(first.shop_single_pack_qty, 1)
-        with self.assertRaises(ValidationError), self.cr.savepoint():
-            template.shop_box_price = 100
+        template.shop_box_price = 100
+        third = self.env['product.attribute.value'].create({
+            'name': 'Medium', 'attribute_id': attribute.id,
+        })
+        template.attribute_line_ids.write({'value_ids': [(4, third.id)]})
+        self.assertEqual(len(template.product_variant_ids), 3)
+        self.assertEqual(first.shop_box_price, 400)
+        self.assertEqual(second.shop_box_price, 800)
 
     def test_negative_values_rejected(self):
         product = self.env['product.product'].create({'name': 'Check Pack Values'})
