@@ -15,6 +15,7 @@
                     <button name="action_apply_shop_menu_preset" type="object" class="btn-primary mb-3"
                             string="Use Shop Apps" help="Select Wholesale Shop, Point of Sale, Invoicing, Dashboards, Inventory and Purchase"/>
                     <group>
+                        <field name="shop_pos_only_screen"/>
                         <field name="shop_restrict_menus"/>
                         <field name="shop_allowed_app_ids" widget="many2many_tags"
                                options="{'no_create': True, 'no_open': True}"

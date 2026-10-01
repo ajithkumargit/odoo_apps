@@ -20,4 +20,32 @@
             </xpath>
         </field>
     </record>
+    <template id="shop_pos_only_landing" name="POS Only Screen">
+        <t t-call="web.frontend_layout">
+            <t t-set="no_header" t-value="True"/>
+            <t t-set="no_footer" t-value="True"/>
+            <main class="container py-5" style="max-width: 720px;">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-4 p-md-5 text-center">
+                        <h1 class="h3 mb-3">Point of Sale</h1>
+                        <t t-if="sessions">
+                            <p class="text-muted">Choose an open register.</p>
+                            <div class="d-grid gap-2 mt-4">
+                                <t t-foreach="sessions" t-as="session">
+                                    <a class="btn btn-primary btn-lg" t-att-href="'/pos/ui/%s' % session.config_id.id">
+                                        <t t-out="session.config_id.name"/>
+                                    </a>
+                                </t>
+                            </div>
+                        </t>
+                        <t t-else="">
+                            <p class="lead mb-2">No session started</p>
+                            <p class="text-muted">Ask an administrator to open a POS register, then refresh this page.</p>
+                            <a class="btn btn-primary mt-3" href="/shop/pos-only">Refresh</a>
+                        </t>
+                    </div>
+                </div>
+            </main>
+        </t>
+    </template>
 </odoo>

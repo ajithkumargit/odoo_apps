@@ -1,10 +1,44 @@
 import json
 
+from lxml import html
+
 from odoo.exceptions import AccessError
 from odoo.tests.common import HttpCase, TransactionCase
 
 
 class TestShopAccess(TransactionCase):
+    def test_pos_only_option_converts_portal_user_to_internal_pos_user(self):
+        portal = self.env.ref('base.group_portal')
+        user = self.env['res.users'].with_context(no_reset_password=True).create({
+            'name': 'Portal POS Cashier',
+            'login': 'portal.pos.cashier.test',
+            'group_ids': [(6, 0, portal.ids)],
+        })
+        self.assertTrue(user.share)
+        user.shop_pos_only_screen = True
+        self.assertFalse(user.share)
+        self.assertFalse(user.has_group('base.group_portal'))
+        self.assertTrue(user.has_group('base.group_user'))
+        self.assertTrue(user.has_group('point_of_sale.group_pos_user'))
+        self.assertTrue(user.has_group('wholesale_shop_pos.group_shop_pos_open_sessions_only'))
+        self.assertTrue(user.shop_pos_only_screen)
+        user.shop_pos_only_screen = False
+        self.assertFalse(user.has_group('wholesale_shop_pos.group_shop_pos_open_sessions_only'))
+
+    def test_assigning_pos_only_group_converts_portal_user(self):
+        portal = self.env.ref('base.group_portal')
+        user = self.env['res.users'].with_context(no_reset_password=True).create({
+            'name': 'Group Portal Cashier',
+            'login': 'group.portal.cashier.test',
+            'group_ids': [(6, 0, portal.ids)],
+        })
+        group = self.env.ref('wholesale_shop_pos.group_shop_pos_open_sessions_only')
+        group.write({'user_ids': [(4, user.id)]})
+        self.assertFalse(user.has_group('base.group_portal'))
+        self.assertTrue(user.has_group('base.group_user'))
+        self.assertTrue(user.has_group('point_of_sale.group_pos_user'))
+        self.assertTrue(user.has_group('wholesale_shop_pos.group_shop_pos_open_sessions_only'))
+
     def test_open_sessions_only_group_cannot_start_session(self):
         group = self.env.ref('wholesale_shop_pos.group_shop_pos_open_sessions_only')
         cashier = self.env['res.users'].with_context(no_reset_password=True).create({
@@ -66,3 +100,33 @@ class TestShopPublicRoutes(HttpCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['result'], [])
+
+    def test_pos_only_user_lands_on_pos_instead_of_portal(self):
+        company = self.env['res.company'].create({'name': 'POS only empty company'})
+        user = self.env['res.users'].with_context(no_reset_password=True).create({
+            'name': 'POS Only Login',
+            'login': 'pos.only.login.test',
+            'password': 'pos-only-test-password',
+            'company_id': company.id,
+            'company_ids': [(6, 0, company.ids)],
+            'group_ids': [(6, 0, [
+                self.env.ref('base.group_user').id,
+                self.env.ref('point_of_sale.group_pos_user').id,
+                self.env.ref('wholesale_shop_pos.group_shop_pos_open_sessions_only').id,
+            ])],
+        })
+        login_page = self.url_open('/web/login', allow_redirects=False)
+        csrf_token = html.fromstring(login_page.text).xpath('//input[@name="csrf_token"]/@value')[0]
+        login_response = self.url_open('/web/login', data={
+            'login': user.login,
+            'password': 'pos-only-test-password',
+            'csrf_token': csrf_token,
+        }, allow_redirects=False)
+        self.assertEqual(login_response.status_code, 303)
+        self.assertIn('/shop/pos-only', login_response.headers['Location'])
+        response = self.url_open('/store', allow_redirects=False)
+        self.assertEqual(response.status_code, 303)
+        self.assertIn('/shop/pos-only', response.headers['Location'])
+        response = self.url_open('/shop/pos-only', allow_redirects=False)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('No session started', response.text)

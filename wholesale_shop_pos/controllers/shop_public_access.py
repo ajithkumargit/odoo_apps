@@ -3,6 +3,8 @@ from odoo.http import request
 from odoo.addons.auth_signup.controllers.main import AuthSignupHome
 from odoo.addons.web.controllers.database import Database
 
+from odoo.addons.wholesale_shop_pos.models.shop_pos_session_access import open_sessions_only
+
 
 def public_setting_enabled(name):
     if not request.db:
@@ -60,6 +62,12 @@ class ShopDatabase(Database):
 
 
 class ShopSignupHome(AuthSignupHome):
+    def _login_redirect(self, uid, redirect=None):
+        user = request.env['res.users'].sudo().browse(uid)
+        if user.exists() and open_sessions_only(user.with_user(user).env):
+            return '/shop/pos-only'
+        return super()._login_redirect(uid, redirect=redirect)
+
     def get_auth_signup_config(self):
         config = super().get_auth_signup_config()
         config['signup_enabled'] = bool(

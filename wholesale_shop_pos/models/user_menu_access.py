@@ -20,6 +20,31 @@ class ShopUserMenuAccess(models.Model):
         domain=[('parent_id', '!=', False)],
         help='Hide these menus and all their children inside the selected apps.',
     )
+    shop_pos_only_screen = fields.Boolean(
+        string='POS Only Screen', compute='_compute_shop_pos_only_screen',
+        inverse='_inverse_shop_pos_only_screen', groups='base.group_system',
+        help='Open an active POS register directly after login, or show No session started. This also gives the user internal POS access and overrides their visible app selection.',
+    )
+
+    @api.depends('group_ids')
+    def _compute_shop_pos_only_screen(self):
+        group = self.env.ref('wholesale_shop_pos.group_shop_pos_open_sessions_only', raise_if_not_found=False)
+        for user in self:
+            user.shop_pos_only_screen = bool(group and group in user.group_ids)
+
+    def _inverse_shop_pos_only_screen(self):
+        restricted = self.env.ref('wholesale_shop_pos.group_shop_pos_open_sessions_only')
+        portal = self.env.ref('base.group_portal')
+        public = self.env.ref('base.group_public')
+        internal = self.env.ref('base.group_user')
+        pos_user = self.env.ref('point_of_sale.group_pos_user')
+        for user in self:
+            groups = user.group_ids
+            if user.shop_pos_only_screen:
+                groups = (groups - portal - public) | internal | pos_user | restricted
+            else:
+                groups -= restricted
+            user.group_ids = [fields.Command.set(groups.ids)]
 
     @api.constrains('shop_allowed_app_ids')
     def _check_shop_allowed_apps(self):
@@ -64,6 +89,10 @@ class ShopMenuVisibility(models.Model):
         if self.env.su or self.env.user.has_group('base.group_system'):
             return visible
         user = self.env.user.sudo()
+        if user.has_group('wholesale_shop_pos.group_shop_pos_open_sessions_only') and not user.has_group('point_of_sale.group_pos_manager'):
+            pos_menu = self.env.ref('point_of_sale.menu_point_root')
+            pos_menus = self.sudo().search([('id', 'child_of', pos_menu.id)])
+            return frozenset(visible.intersection(pos_menus.ids))
         if not user.shop_restrict_menus:
             return visible
         menus = self.sudo()
@@ -73,3 +102,25 @@ class ShopMenuVisibility(models.Model):
         # Apply this after the standard group/model-access check; the setting
         # can remove menus but cannot grant access the user does not have.
         return frozenset(visible.intersection(allowed.ids))
+
+
+class ShopPosOnlyGroup(models.Model):
+    _inherit = 'res.groups'
+
+    def write(self, values):
+        restricted = self.env.ref('wholesale_shop_pos.group_shop_pos_open_sessions_only', raise_if_not_found=False)
+        if restricted and restricted in self and 'user_ids' in values:
+            assigned_ids = set()
+            for command in values['user_ids']:
+                if command[0] == fields.Command.SET:
+                    assigned_ids.update(command[2])
+                elif command[0] == fields.Command.LINK:
+                    assigned_ids.add(command[1])
+            portal = self.env.ref('base.group_portal')
+            public = self.env.ref('base.group_public')
+            internal = self.env.ref('base.group_user')
+            for user in self.env['res.users'].browse(assigned_ids):
+                if portal in user.group_ids or public in user.group_ids:
+                    groups = (user.group_ids - portal - public) | internal
+                    user.group_ids = [fields.Command.set(groups.ids)]
+        return super().write(values)

@@ -1,6 +1,6 @@
 # Shop access controls
 
-After upgrading `wholesale_shop_pos`, assign **Open Sessions Only** under **Settings → Users → Access Rights → POS Session Visibility** to each cashier who must not start a register. These users see **Continue Selling** only for an opened POS session; otherwise the dashboard says **No session started**. POS Administrators and Settings Administrators are exempt. Remove the group to restore normal POS access.
+After upgrading `wholesale_shop_pos`, select **POS Only Screen** on a user's **Menu Access** tab, or assign **POS Only Screen (Open Sessions)** under **Settings → Users → Access Rights → POS Session Visibility**. The option converts a portal user to an internal POS user. At login the user goes straight to the one open POS register, can choose among several open registers, or sees a simple **No session started** page. POS Administrators and Settings Administrators are exempt. Clear the option or remove the group to restore normal login. The user remains an internal account after clearing the option; an administrator can separately change its user type if needed.
 
 Use **Settings → Wholesale Shop → Public Access** to change access to public database tools, self-signup, and password reset at any time. All three switches default to off. Invited users can still follow their private invitation link. The login page has no database selector, database manager, or debug superuser link.
 
