@@ -10,6 +10,65 @@ class TestLocalBillOCRParser(TransactionCase):
             [[x, y], [x + width, y], [x + width, y + 16], [x, y + 16]],
         )
 
+    def test_product_full_name_and_pieces_invoice(self):
+        aliases = {
+            'serial': ['S.No'], 'description': ['Product Full Name'],
+            'hsn': ['HSN Code'], 'mrp': ['New MRP'],
+            'case': ['Case'], 'quantity': ['Pieces'],
+            'free_quantity': ['Free Qty'], 'rate': ['Rate'],
+            'taxable': ['Taxable Amt'], 'cgst_percent': ['CGST%'],
+            'sgst_percent': ['SGST%'], 'net': ['Total'],
+        }
+        tokens = [
+            self._token('S.No', 10, 190, 30),
+            self._token('Product', 55, 190, 65),
+            self._token('Full', 125, 190, 35),
+            self._token('Name', 165, 190, 45),
+            self._token('HSN Code', 360, 190, 75),
+            self._token('Old MRP', 570, 190, 65),
+            self._token('New MRP', 655, 190, 70),
+            self._token('Case', 745, 190, 40),
+            self._token('Pieces', 805, 190, 50),
+            self._token('Free Qty', 875, 190, 55),
+            self._token('Rate', 950, 190, 40),
+            self._token('Taxable Amt', 1080, 190, 90),
+            self._token('SGST%', 1185, 190, 55),
+            self._token('CGST%', 1250, 190, 55),
+            self._token('Total', 1340, 190, 45),
+        ]
+        for y, number, name, mrp, pieces, free, rate, amount in [
+            (240, 1, 'Stayfree Secure Ultra 6s', 54, 3, 0, 48.21, 144.63),
+            (280, 2, 'SF Secure Dry XL6', 50, 9, 1, 44.64, 401.76),
+            (320, 3, 'SF Secure Cottony Regular 6', 37, 11, 1, 33.04, 352.54),
+        ]:
+            tokens += [
+                self._token(str(number), 10, y, 20),
+                self._token(name, 55, y, 275),
+                self._token('96190010', 360, y, 70),
+                self._token(f'{mrp:.2f}', 655, y, 55),
+                self._token('0', 745, y, 20),
+                self._token(str(pieces), 805, y, 20),
+                self._token(str(free), 875, y, 20),
+                self._token(f'{rate:.2f}', 950, y, 50),
+                self._token(f'{amount:.2f}', 1080, y, 60),
+                self._token('0.00', 1185, y, 45),
+                self._token('0.00', 1250, y, 45),
+                self._token(f'{amount:.2f}', 1340, y, 60),
+            ]
+        tokens.append(self._token('Total Quantity', 700, 370, 130))
+        alias_token = local_bill_ocr._HEADER_ALIASES.set(aliases)
+        template_token = local_bill_ocr._OCR_TEMPLATE.set({
+            'strict': True, 'aliases': aliases, 'data_rows_per_item': 1,
+        })
+        try:
+            parsed = local_bill_ocr._parse_page(tokens, 1450, 420)
+        finally:
+            local_bill_ocr._OCR_TEMPLATE.reset(template_token)
+            local_bill_ocr._HEADER_ALIASES.reset(alias_token)
+        self.assertEqual(len(parsed['lines']), 3, parsed['warnings'])
+        self.assertEqual([line['quantity'] for line in parsed['lines']], [3, 9, 11])
+        self.assertEqual([line['mrp'] for line in parsed['lines']], [54, 50, 37])
+
     def test_coordinate_parser_extracts_metadata_and_table_values(self):
         tokens = [
             self._token("SNK PILLAI AGENCIES", 15, 30, 190),

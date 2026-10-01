@@ -1044,6 +1044,47 @@ def _table_header_role(text):
 def _join_table_header_tokens(tokens, median_height):
     """Join adjacent label fragments, including a separately OCR'd percent sign."""
     tokens = [token for line in _group_lines(tokens) for token in line["tokens"]]
+    # OCR often returns a long heading as three words (or as two chunks,
+    # e.g. "Product Full" + "Name"). The pairwise join below cannot make
+    # those chunks into a configured heading, so recover the whole alias first.
+    long_aliases = {
+        _normalise_key(label)
+        for labels in (_HEADER_ALIASES.get() or {}).values()
+        for label in labels
+        if len(str(label).split()) >= 3
+    }
+    if long_aliases:
+        joined = []
+        used = set()
+        for index, token in enumerate(tokens):
+            if index in used:
+                continue
+            parts = [token]
+            key = _normalise_key(token["text"])
+            for following_index in range(index + 1, min(index + 4, len(tokens))):
+                following = tokens[following_index]
+                if following_index in used or not any(alias.startswith(key) for alias in long_aliases):
+                    break
+                previous = parts[-1]
+                if (abs(following["yc"] - token["yc"]) > median_height * 0.8
+                        or following["x0"] < previous["x0"]
+                        or following["x0"] - previous["x1"] > median_height * 2):
+                    break
+                parts.append(following)
+                key += _normalise_key(following["text"])
+                if key in long_aliases:
+                    break
+            if len(parts) > 1 and key in long_aliases:
+                used.update(range(index, index + len(parts)))
+                x0, x1 = min(part["x0"] for part in parts), max(part["x1"] for part in parts)
+                y0, y1 = min(part["y0"] for part in parts), max(part["y1"] for part in parts)
+                joined.append({**token, "text": " ".join(part["text"] for part in parts),
+                               "x0": x0, "x1": x1, "y0": y0, "y1": y1,
+                               "xc": (x0 + x1) / 2, "yc": (y0 + y1) / 2})
+            else:
+                joined.append(token)
+                used.add(index)
+        tokens = joined
     merged = []
     consumed = set()
     suffixes = {"%", "AMT", "AMOUNT", "தொகை", "பெயர்", "NAME", "PRICE", "RATE"}
