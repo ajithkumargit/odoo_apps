@@ -11,5 +11,6 @@ from . import test_product_pack_prices
 from . import test_manual_sale_price
 from . import test_shop_access
 from . import test_product_weight_pricing
+from . import test_product_attribute_sequence
 
 from . import test_bulk_purchase_flow
