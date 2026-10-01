@@ -76,9 +76,12 @@ DEFAULT_TEMPLATE_ALIASES = {
 # Physical columns used by stacked, multi-row product tables. These aliases
 # remain vendor-editable; the parser does not depend on a vendor name.
 DEFAULT_TEMPLATE_ALIASES["serial"].extend(["Item No", "Line No"])
-DEFAULT_TEMPLATE_ALIASES["description"].extend(["Item Name", "Product Full Name", "SKU Description"])
+DEFAULT_TEMPLATE_ALIASES["description"].extend(["Item Name", "Item Description", "Product Full Name", "SKU Description"])
 DEFAULT_TEMPLATE_ALIASES["quantity"].append("Pieces")
 DEFAULT_TEMPLATE_ALIASES["mrp"].append("New MRP")
+DEFAULT_TEMPLATE_ALIASES["rate"].append("Pc Price")
+DEFAULT_TEMPLATE_ALIASES["scheme_discount"].append("Sch Amt")
+DEFAULT_TEMPLATE_ALIASES["net"].append("Net Amt")
 DEFAULT_TEMPLATE_ALIASES.update({
     "uom": ["UOM", "Unit"],
     "secondary_quantity": ["Qty in SUOM", "Secondary Qty", "Weight"],

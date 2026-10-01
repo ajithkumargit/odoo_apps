@@ -69,6 +69,58 @@ class TestLocalBillOCRParser(TransactionCase):
         self.assertEqual([line['quantity'] for line in parsed['lines']], [3, 9, 11])
         self.assertEqual([line['mrp'] for line in parsed['lines']], [54, 50, 37])
 
+    def test_item_description_pc_price_without_hsn_column(self):
+        aliases = {
+            'serial': ['S.No'], 'description': ['Item Description'],
+            'mrp': ['MRP'], 'case': ['Cs'], 'quantity': ['Pcs'],
+            'upc': ['UPC'], 'rate': ['Pc Price'],
+            'gross_amount': ['Gross Amt'], 'scheme_discount': ['SCH Amt'],
+            'discount_amount': ['Disc Amt'], 'taxable': ['Taxable Amt'],
+            'gst': ['GST %'], 'net': ['Net Amt'],
+        }
+        tokens = [
+            self._token('Pcs', 610, 90, 35),
+            self._token('Gross Amt', 795, 90, 80),
+            self._token('27', 610, 120, 30),
+            self._token('1552.13', 795, 120, 65),
+        ]
+        for label, x, width in [
+            ('S.No', 5, 35), ('Item Description', 50, 220),
+            ('MRP', 500, 45), ('Cs', 565, 30), ('Pcs', 610, 35),
+            ('UPC', 655, 45), ('Pc Price', 710, 75),
+            ('Gross Amt', 795, 80), ('SCH Amt', 875, 70),
+            ('Disc Amt', 950, 70), ('Taxable Amt', 1030, 90),
+            ('GST %', 1110, 55), ('Net Amt', 1330, 70),
+        ]:
+            tokens.append(self._token(label, x, 190, width))
+        for y, number, name, mrp, qty, upc, rate, gross, scheme, taxable, gst, net in [
+            (245, 1, 'VAPORUB 5GM', 23, 5, 1200, 18.28, 91.40, 4.57, 86.83, 5, 91.17),
+            (290, 2, 'Guard Razor SBD', 150, 2, 108, 101.70, 203.40, 0, 203.40, 18, 240.02),
+        ]:
+            for value, x, width in [
+                (number, 5, 25), (name, 50, 260), (f'{mrp:.2f}', 500, 50),
+                (0, 565, 25), (qty, 610, 30), (upc, 655, 40),
+                (f'{rate:.2f}', 710, 65), (f'{gross:.2f}', 795, 65),
+                (f'{scheme:.2f}', 875, 55), ('0.00', 950, 55),
+                (f'{taxable:.2f}', 1030, 65), (f'{gst:.2f}', 1110, 45),
+                (f'{net:.2f}', 1330, 65),
+            ]:
+                tokens.append(self._token(str(value), x, y, width))
+        tokens.append(self._token('Total', 50, 340, 60))
+        alias_token = local_bill_ocr._HEADER_ALIASES.set(aliases)
+        template_token = local_bill_ocr._OCR_TEMPLATE.set({
+            'strict': True, 'aliases': aliases, 'data_rows_per_item': 1,
+        })
+        try:
+            parsed = local_bill_ocr._parse_page(tokens, 1450, 420)
+        finally:
+            local_bill_ocr._OCR_TEMPLATE.reset(template_token)
+            local_bill_ocr._HEADER_ALIASES.reset(alias_token)
+        self.assertEqual(len(parsed['lines']), 2, parsed['warnings'])
+        self.assertEqual([line['quantity'] for line in parsed['lines']], [5, 2])
+        self.assertEqual([line['purchase_rate'] for line in parsed['lines']], [18.28, 101.70])
+        self.assertEqual([line['gst_percent'] for line in parsed['lines']], [5, 18])
+
     def test_coordinate_parser_extracts_metadata_and_table_values(self):
         tokens = [
             self._token("SNK PILLAI AGENCIES", 15, 30, 190),

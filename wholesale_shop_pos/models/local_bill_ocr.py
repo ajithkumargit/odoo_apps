@@ -2266,7 +2266,7 @@ def _extract_table_lines(tokens, page_width):
             tokens, page_width, header, rows_per_item
         )
     # A Cases column alone does not imply SNK's fixed fifteen-column layout.
-    if not {"upc", "case", "taxable", "gst"}.issubset(header_roles):
+    if not {"hsn", "upc", "case", "taxable", "gst"}.issubset(header_roles):
         return _extract_labelled_table_lines(tokens, page_width, header)
     table_left = max(0.0, min(token["x0"] for token in header_tokens) - median_height)
     table_right = min(
