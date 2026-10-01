@@ -157,6 +157,7 @@
                                     <field name="mrp" optional="show"/>
                                     <field name="purchase_rate"/>
                                     <field name="discount_percent" optional="show"/>
+                                    <field name="discount_amount" optional="show"/>
                                     <field name="gst_percent" optional="show"/>
                                     <field name="tax_ids" widget="many2many_tags"/>
                                     <field name="purchase_unit_price_incl_tax" optional="show"/>
@@ -186,6 +187,7 @@
                                         <field name="mrp"/>
                                         <field name="purchase_rate"/>
                                         <field name="discount_percent"/>
+                                        <field name="discount_amount"/>
                                         <field name="gst_percent"/>
                                         <field name="tax_ids" widget="many2many_tags"/>
                                         <field name="purchase_unit_price_incl_tax"/>
@@ -282,6 +284,7 @@
                 <field name="mrp" optional="show"/>
                 <field name="purchase_rate" readonly="1"/>
                 <field name="discount_percent" readonly="1"/>
+                <field name="discount_amount"/>
                 <field name="gst_percent" readonly="1"/>
                 <field name="tax_ids" widget="many2many_tags"/>
                 <field name="purchase_unit_price_incl_tax" readonly="1"/>

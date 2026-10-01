@@ -1033,6 +1033,14 @@ class ShopPurchaseImportLine(models.Model):
         help="Printed maximum retail price per sale unit, including taxes. For matched regular products with zero Profit %, a reviewed bill sets Sales Price to this MRP. It does not change the bill total.",
     )
     discount_percent = fields.Float(string="Discount %", default=0.0)
+    discount_amount = fields.Monetary(
+        string="Discount Amount",
+        compute="_compute_discount_amount",
+        inverse="_inverse_discount_amount",
+        store=True,
+        currency_field="currency_id",
+        help="Discount for the entire bill line before tax. Editing it updates Discount %.",
+    )
     units_per_purchase_qty = fields.Float(
         string="Units in One Qty",
         default=1.0,
@@ -1372,6 +1380,21 @@ class ShopPurchaseImportLine(models.Model):
 
     def _inverse_item_unit_cost_incl_tax(self):
         self._set_purchase_rate_from_amount("item_unit_cost_incl_tax")
+
+    @api.depends("quantity", "purchase_rate", "discount_percent")
+    def _compute_discount_amount(self):
+        for line in self:
+            line.discount_amount = line.quantity * line.purchase_rate * line.discount_percent / 100.0
+
+    def _inverse_discount_amount(self):
+        for line in self:
+            gross = line.quantity * line.purchase_rate
+            amount = line.discount_amount
+            if amount < 0 or amount > gross:
+                raise ValidationError(_("Discount Amount must be between zero and the line's gross amount."))
+            if not gross and amount:
+                raise ValidationError(_("Set a positive quantity and purchase rate before entering Discount Amount."))
+            line.discount_percent = amount / gross * 100.0 if gross else 0.0
 
     def _set_purchase_rate_from_amount(self, amount_field):
         """Adjust the purchase rate so an edited derived amount remains consistent."""

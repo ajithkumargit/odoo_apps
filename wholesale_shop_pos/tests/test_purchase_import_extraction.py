@@ -449,6 +449,27 @@ class TestPurchaseImportExtraction(TransactionCase):
         with self.assertRaisesRegex(UserError, "positive quantity"):
             line.total_amount = 100
 
+    def test_edit_discount_amount_updates_percent_and_line_total(self):
+        bill = self.env["shop.purchase.import"].create({
+            "vendor_id": self.vendor.id,
+            "state": "review",
+            "line_ids": [(0, 0, {
+                "raw_description": "Discounted biscuits",
+                "product_id": self.product.id,
+                "quantity": 5,
+                "purchase_rate": 20,
+                "tax_ids": [(5, 0, 0)],
+            })],
+        })
+        line = bill.line_ids
+        line.discount_amount = 10
+        self.assertAlmostEqual(line.discount_percent, 10)
+        self.assertAlmostEqual(line.taxable_amount, 90)
+        self.assertAlmostEqual(bill.total_amount, 90)
+        line.discount_percent = 5
+        self.assertAlmostEqual(line.discount_amount, 5)
+        self.assertAlmostEqual(line.total_amount, 95)
+
     def test_edit_calculated_bill_amounts_updates_rate(self):
         purchase_import = self.env["shop.purchase.import"].create({
             "vendor_id": self.vendor.id,
