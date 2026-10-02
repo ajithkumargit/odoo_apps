@@ -21,3 +21,4 @@ from . import product_pack_prices
 from . import shop_pos_session_access
 from . import shop_public_settings
 from . import product_attribute_sequence
+from . import shop_ai_chat

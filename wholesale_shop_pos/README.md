@@ -1,5 +1,18 @@
 # Wholesale Shop POS Core - Odoo 19
 
+### AI Chat
+
+After upgrading the module, open **Wholesale Shop → AI Chat**. In **Settings →
+Wholesale Shop → AI Chat**, an administrator must enter an OpenAI API key and
+may change the model (default `gpt-4.1-mini`). An `OPENAI_API_KEY` environment
+variable on the Odoo service also works and takes precedence. Installing the
+module does not create an API key or an OpenAI subscription.
+
+The chat can search and read business records through Odoo's normal access
+rights. Each user sees only their own conversations. It cannot run SQL, modify
+records, edit Python files, or restart the Odoo service. Code deployment still
+uses the server's existing Git and service-management workflow.
+
 ### Linux server OCR setup
 
 From the deployed addon directory, run:

@@ -14,4 +14,5 @@
     <menuitem id="menu_shop_bill_ocr_template" name="Vendor OCR Templates" parent="menu_wholesale_shop_root" action="action_shop_bill_ocr_template" sequence="24"/>
     <menuitem id="menu_shop_new_product_review" name="New Product Review" parent="menu_wholesale_shop_root" action="action_shop_new_product_review" sequence="25"/>
     <menuitem id="menu_shop_price_history" name="Price History" parent="menu_wholesale_shop_root" action="action_shop_product_price_history" sequence="30"/>
+    <menuitem id="menu_shop_ai_chat" name="AI Chat" parent="menu_wholesale_shop_root" action="action_shop_ai_chat" sequence="35" groups="base.group_user"/>
 </odoo>

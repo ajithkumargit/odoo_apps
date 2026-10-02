@@ -8,3 +8,5 @@ access_shop_product_price_history_user,shop.product.price.history user,model_sho
 access_shop_purchase_import_create_product_wizard_user,shop.purchase.import.create.product.wizard user,model_shop_purchase_import_create_product_wizard,base.group_user,1,1,1,1
 access_shop_bill_ocr_template_user,shop.bill.ocr.template user,model_shop_bill_ocr_template,base.group_user,1,1,1,1
 access_shop_bill_ocr_header_alias_user,shop.bill.ocr.header.alias user,model_shop_bill_ocr_header_alias,base.group_user,1,1,1,1
+access_shop_ai_chat_user,shop.ai.chat user,model_shop_ai_chat,base.group_user,1,1,1,1
+access_shop_ai_chat_message_user,shop.ai.chat.message user,model_shop_ai_chat_message,base.group_user,1,1,1,0

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="rule_shop_ai_chat_owner" model="ir.rule">
+        <field name="name">Shop AI chat owner</field>
+        <field name="model_id" ref="model_shop_ai_chat"/>
+        <field name="domain_force">[('user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+    <record id="rule_shop_ai_chat_message_owner" model="ir.rule">
+        <field name="name">Shop AI chat message owner</field>
+        <field name="model_id" ref="model_shop_ai_chat_message"/>
+        <field name="domain_force">[('chat_id.user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+</odoo>

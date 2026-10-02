@@ -14,6 +14,13 @@
                             <field name="shop_serpapi_key" password="True" placeholder="Optional SerpAPI key"/>
                         </setting>
                     </block>
+                    <block title="AI Chat" name="wholesale_ai_chat">
+                        <setting id="shop_ai_api_key" string="OpenAI connection"
+                                 help="Enter your OpenAI API key to enable AI Chat. Messages and selected Odoo record details are sent to OpenAI. The server-side key is never sent to browser JavaScript. Alternatively set OPENAI_API_KEY in the Odoo service environment.">
+                            <field name="shop_ai_api_key" password="True" placeholder="OpenAI API key"/>
+                            <field name="shop_ai_model" placeholder="gpt-4.1-mini"/>
+                        </setting>
+                    </block>
                     <block title="Public Access" name="wholesale_public_access">
                         <setting id="shop_public_database_tools" string="Public database tools"
                                  help="Off: only a signed-in Settings administrator can use database manager, selector, list, backup and other database endpoints. The server's dbfilter and list_db settings may further restrict them.">
