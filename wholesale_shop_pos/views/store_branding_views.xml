@@ -15,7 +15,7 @@
     <template id="store_no_scoped_install" inherit_id="web.webclient_scoped_app" priority="90">
         <xpath expr="//link[@rel='manifest']" position="replace"/>
     </template>
-    <template id="store_login_footer" inherit_id="web.login_layout" priority="90">
+    <template id="store_login_footer" inherit_id="web.login_layout" priority="5">
         <xpath expr="//div[@t-if='not disable_footer']" position="replace"/>
     </template>
     <template id="store_login_no_database_selector" inherit_id="web.login" priority="90">
