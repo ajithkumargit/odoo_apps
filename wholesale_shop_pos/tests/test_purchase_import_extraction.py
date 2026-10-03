@@ -50,6 +50,25 @@ class TestPurchaseImportExtraction(TransactionCase):
             "original_file_name": "bill.png",
         })
 
+    def test_extraction_is_queued_and_cron_processes_one_bill_at_a_time(self):
+        first = self._new_import()
+        second = self._new_import()
+        (first | second).write({'vendor_id': self.vendor.id})
+        first.action_extract_bill()
+        second.action_extract_bill()
+        self.assertEqual((first.extraction_status, second.extraction_status), ('queued', 'queued'))
+
+        def finish_bill(bill, _data, _engine, _fingerprint):
+            bill.extraction_status = 'done'
+
+        with patch.object(type(first), '_prepare_combined_bill', return_value=(b'bill', 'image/png')), \
+             patch.object(type(first), '_extract_bill_locally', return_value=({}, 'test', 'fingerprint')), \
+             patch.object(type(first), '_apply_extracted_bill', finish_bill):
+            first._cron_extract_queued_bills()
+            self.assertEqual((first.extraction_status, second.extraction_status), ('done', 'queued'))
+            first._cron_extract_queued_bills()
+        self.assertEqual(second.extraction_status, 'done')
+
     def test_existing_regular_variant_gets_bill_cost_and_mrp_sale_on_review(self):
         attribute = self.env['product.attribute'].create({'name': 'Regular pack size'})
         values = self.env['product.attribute.value'].create([

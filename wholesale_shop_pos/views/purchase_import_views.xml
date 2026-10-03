@@ -12,6 +12,7 @@
                 <field name="matched_line_count"/>
                 <field name="unmatched_line_count"/>
                 <field name="total_amount" sum="Total"/>
+                <field name="extraction_status" widget="badge"/>
                 <field name="state" widget="badge"/>
             </list>
         </field>
@@ -25,7 +26,7 @@
                 <header>
                     <button name="action_extract_bill" string="Extract Bill" type="object" class="btn-primary"
                             title="Read the uploaded bill, reconstruct its lines, and automatically match known products and taxes"
-                            invisible="state not in ('draft', 'review') or (not original_file and not page_ids)"/>
+                            invisible="state not in ('draft', 'review') or extraction_status == 'queued' or (not original_file and not page_ids)"/>
                     <button name="action_match_products" string="Auto Match Products" type="object" class="btn-secondary"
                             title="Retry matching unmatched bill lines to known products"
                             invisible="state not in ('draft', 'review') or not line_ids"/>
@@ -207,6 +208,7 @@
                         <page string="Extraction / Audit">
                             <group>
                                 <field name="extraction_status" widget="badge"/>
+                                <field name="extraction_error" invisible="extraction_status != 'failed'"/>
                                 <field name="extracted_vendor_name"/>
                                 <field name="extraction_model"/>
                                 <field name="extracted_at"/>

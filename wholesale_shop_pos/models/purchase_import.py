@@ -83,6 +83,7 @@ class ShopPurchaseImport(models.Model):
     extraction_status = fields.Selection(
         [
             ("not_extracted", "Not Extracted"),
+            ("queued", "Queued"),
             ("done", "Extracted"),
             ("failed", "Failed"),
         ],
@@ -92,6 +93,7 @@ class ShopPurchaseImport(models.Model):
         copy=False,
     )
     extraction_model = fields.Char(string="Local OCR Engine", readonly=True, copy=False)
+    extraction_error = fields.Text(string="Extraction Error", readonly=True, copy=False)
     extraction_response_id = fields.Char(string="File Fingerprint", readonly=True, copy=False)
     extracted_at = fields.Datetime(readonly=True, copy=False)
     state = fields.Selection(
@@ -622,28 +624,49 @@ class ShopPurchaseImport(models.Model):
             raise UserError(_("Only uploaded or review-stage bills can be extracted."))
         if self.line_ids:
             raise UserError(_("Remove the existing bill lines before extracting the file again."))
-
-        file_bytes, mimetype = self._prepare_combined_bill()
-        try:
-            extracted_data, engine, fingerprint = self._extract_bill_locally(
-                file_bytes, mimetype
-            )
-            self._apply_extracted_bill(extracted_data, engine, fingerprint)
-        except UserError:
-            self.extraction_status = "failed"
-            raise
+        if self.extraction_status == "queued":
+            raise UserError(_("This bill is already queued for extraction."))
+        if not self.vendor_id:
+            raise UserError(_("Select the vendor before extracting the bill."))
+        if not self.original_file and not self.page_ids:
+            raise UserError(_("Upload a bill image or PDF before extracting."))
+        self.write({"extraction_status": "queued", "extraction_error": False})
 
         return {
             "type": "ir.actions.client",
             "tag": "display_notification",
             "params": {
-                "title": _("Bill extracted"),
-                "message": _("Review the vendor, matched products, quantities, rates, and taxes before continuing."),
-                "type": "success",
+                "title": _("Bill queued"),
+                "message": _("Extraction will run in the background. Refresh this bill shortly to review the lines."),
+                "type": "info",
                 "sticky": False,
                 "next": {"type": "ir.actions.client", "tag": "soft_reload"},
             },
         }
+
+    @api.model
+    def _cron_extract_queued_bills(self):
+        """Run one OCR job per cron tick, away from HTTP request workers."""
+        self.flush_model(["extraction_status", "state"])
+        self.env.cr.execute("""
+            SELECT id FROM shop_purchase_import
+            WHERE extraction_status = 'queued' AND state IN ('draft', 'review')
+            ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
+        """)
+        row = self.env.cr.fetchone()
+        if not row:
+            return
+        bill = self.browse(row[0])
+        try:
+            with self.env.cr.savepoint():
+                if bill.line_ids:
+                    raise UserError(_("Existing bill lines must be removed before extraction."))
+                file_bytes, mimetype = bill._prepare_combined_bill()
+                extracted_data, engine, fingerprint = bill._extract_bill_locally(file_bytes, mimetype)
+                bill._apply_extracted_bill(extracted_data, engine, fingerprint)
+        except Exception as error:
+            _logger.exception("Background OCR failed for bill import %s", bill.id)
+            bill.write({"extraction_status": "failed", "extraction_error": str(error)[:2000]})
 
     def action_match_products(self):
         Product = self.env["product.product"]
