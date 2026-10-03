@@ -4,12 +4,15 @@ import { registry } from "@web/core/registry";
 import { standardWidgetProps } from "@web/views/widgets/standard_widget_props";
 import { isBinarySize } from "@web/core/utils/binary";
 import { imageUrl } from "@web/core/utils/urls";
+import { useService } from "@web/core/utils/hooks";
 
 export class BillImagePreview extends Component {
     static template = "wholesale_shop_pos.BillImagePreview";
     static props = standardWidgetProps;
     setup() {
-        this.state = useState({ open: false, index: 0, zoom: 100, x: 20, y: 80 });
+        this.orm = useService("orm");
+        this.notification = useService("notification");
+        this.state = useState({ open: false, index: 0, zoom: 100, rotation: 0, busy: false, version: 0, x: 20, y: 80 });
     }
     get pages() {
         const record = this.props.record;
@@ -31,7 +34,7 @@ export class BillImagePreview extends Component {
         if (!page) return "";
         const value = page.record.data[page.field];
         if (isBinarySize(value)) {
-            return imageUrl(page.record.resModel, page.record.resId, page.field, { unique: page.record.data.write_date || value });
+            return imageUrl(page.record.resModel, page.record.resId, page.field, { unique: `${page.record.data.write_date || value}-${this.state.version}` });
         }
         const kind = value[0] === "i" ? "png" : value[0] === "U" ? "webp" : value[0] === "R" ? "gif" : "jpeg";
         return `data:image/${kind};base64,${value}`;
@@ -41,8 +44,31 @@ export class BillImagePreview extends Component {
         this.state.y = Math.min(80, window.innerHeight / 4);
         this.state.open = true;
     }
-    select(event) { this.state.index = Number(event.target.value); this.state.zoom = 100; }
+    select(event) { this.state.index = Number(event.target.value); this.state.zoom = 100; this.state.rotation = 0; }
     zoom(delta) { this.state.zoom = Math.max(50, Math.min(400, this.state.zoom + delta)); }
+    rotate(delta) { this.state.rotation = (this.state.rotation + delta + 360) % 360; }
+    async saveRotation() {
+        if (!this.state.rotation || this.state.busy) return;
+        this.state.busy = true;
+        try {
+            // Save pending uploads before calling the rotation method on the page.
+            if (!this.page?.record.resId || await this.props.record.isDirty()) {
+                const saved = await this.props.record.save();
+                if (!saved) return;
+            }
+            const page = this.page;
+            if (!page?.record.resId) throw new Error("Save the bill page before rotating it.");
+            await this.orm.call(page.record.resModel, "action_rotate_bill_image", [[page.record.resId], this.state.rotation / 90]);
+            this.state.rotation = 0;
+            this.state.version += 1;
+            await this.props.record.load();
+            this.notification.add("Rotated bill image saved.", { type: "success" });
+        } catch (error) {
+            this.notification.add(error.message || "Could not save the rotated image.", { type: "danger" });
+        } finally {
+            this.state.busy = false;
+        }
+    }
     start(event) {
         if (event.button !== 0 || event.target.closest("button")) return;
         this.drag = { x: event.clientX - this.state.x, y: event.clientY - this.state.y };

@@ -22,9 +22,15 @@
                     <button type="button" class="btn btn-sm btn-secondary" aria-label="Zoom out" t-on-click="() => this.zoom(-25)">−</button>
                     <button type="button" class="btn btn-sm btn-secondary text-nowrap" title="Fit width" t-on-click="() => state.zoom = 100"><t t-esc="state.zoom"/>%</button>
                     <button type="button" class="btn btn-sm btn-secondary" aria-label="Zoom in" t-on-click="() => this.zoom(25)">+</button>
+                    <button type="button" class="btn btn-sm btn-secondary text-nowrap" title="Rotate left" aria-label="Rotate left"
+                            t-att-disabled="state.busy" t-on-click="() => this.rotate(270)"><i class="fa fa-rotate-left"/></button>
+                    <button type="button" class="btn btn-sm btn-secondary text-nowrap" title="Rotate right" aria-label="Rotate right"
+                            t-att-disabled="state.busy" t-on-click="() => this.rotate(90)"><i class="fa fa-rotate-right"/></button>
+                    <button type="button" class="btn btn-sm btn-primary text-nowrap" t-att-disabled="!state.rotation || state.busy"
+                            t-on-click="saveRotation">Save rotation</button>
                 </div>
                 <div class="o_shop_bill_preview_image">
-                    <img t-att-src="url" t-att-alt="page.name" t-att-style="'width:' + state.zoom + '%;'" draggable="false"/>
+                    <img t-att-src="url" t-att-alt="page.name" t-att-style="'width:' + state.zoom + '%;transform:rotate(' + state.rotation + 'deg);'" draggable="false"/>
                 </div>
                 <div class="small text-muted px-2 py-1">Drag the title to move. Drag the bottom-right corner to resize.</div>
             </section>

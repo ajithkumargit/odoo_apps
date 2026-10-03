@@ -4,6 +4,7 @@ import json
 import logging
 import mimetypes
 import re
+from pathlib import Path
 from difflib import SequenceMatcher
 
 from odoo import _, api, fields, models
@@ -25,6 +26,33 @@ SUPPORTED_BILL_MIMETYPES = {
 MAX_BILL_FILE_SIZE = 20 * 1024 * 1024
 MAX_BILL_TOTAL_SIZE = 100 * 1024 * 1024
 MAX_BILL_DOCUMENTS = 20
+
+
+def _rotated_bill_image(binary_value, filename, turns):
+    """Return a newly encoded image; never rotate a PDF or trust its extension."""
+    from PIL import Image, ImageOps, UnidentifiedImageError
+
+    if type(turns) is not int or turns not in (1, 2, 3):
+        raise UserError(_("Choose a quarter-turn rotation."))
+    if (filename or "").lower().endswith(".pdf"):
+        raise UserError(_("PDF pages cannot be rotated in the image viewer."))
+    try:
+        source = base64.b64decode(binary_value)
+        with Image.open(BytesIO(source)) as original:
+            if original.format not in ("JPEG", "PNG", "WEBP", "GIF"):
+                raise UserError(_("Only image pages can be rotated."))
+            image = ImageOps.exif_transpose(original).rotate(-90 * turns, expand=True)
+            output_format = original.format if original.format in ("JPEG", "PNG", "WEBP") else "PNG"
+            if output_format == "JPEG" and image.mode not in ("RGB", "L"):
+                image = image.convert("RGB")
+            buffer = BytesIO()
+            image.save(buffer, format=output_format)
+    except (ValueError, OSError, UnidentifiedImageError) as error:
+        raise UserError(_("This image could not be rotated. Upload a valid image and try again.")) from error
+    if buffer.tell() > MAX_BILL_FILE_SIZE:
+        raise UserError(_("The rotated image exceeds the 20 MB bill page limit."))
+    extension = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp"}[output_format]
+    return base64.b64encode(buffer.getvalue()), str(Path(filename or "bill-page").with_suffix(extension))
 
 
 class ShopPurchaseImport(models.Model):
@@ -139,6 +167,16 @@ class ShopPurchaseImport(models.Model):
             "crop_left": 0.0, "crop_top": 0.0,
             "crop_right": 100.0, "crop_bottom": 100.0,
         })
+        return True
+
+    def action_rotate_bill_image(self, turns):
+        self.ensure_one()
+        if self.state == "cancelled" or self.extraction_status == "queued":
+            raise UserError(_("This bill image cannot be changed now."))
+        if not self.original_file:
+            raise UserError(_("Upload the first bill page before rotating it."))
+        image, filename = _rotated_bill_image(self.original_file, self.original_file_name, turns)
+        self.write({"original_file": image, "original_file_name": filename})
         return True
 
     def get_product_name_crop_sources(self):
@@ -993,6 +1031,14 @@ class ShopPurchaseImportPage(models.Model):
             "crop_right": 100.0,
             "crop_bottom": 100.0,
         })
+        return True
+
+    def action_rotate_bill_image(self, turns):
+        self.ensure_one()
+        if self.import_id.state == "cancelled" or self.import_id.extraction_status == "queued":
+            raise UserError(_("This bill image cannot be changed now."))
+        image, filename = _rotated_bill_image(self.page_file, self.page_file_name, turns)
+        self.write({"page_file": image, "page_file_name": filename})
         return True
 
     def write(self, vals):

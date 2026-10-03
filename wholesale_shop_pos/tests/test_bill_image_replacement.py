@@ -1,5 +1,7 @@
 import base64
+from io import BytesIO
 from odoo.tests.common import TransactionCase
+from PIL import Image
 
 
 class TestBillImageReplacement(TransactionCase):
@@ -36,3 +38,19 @@ class TestBillImageReplacement(TransactionCase):
         self.bill.note = 'Review this image'
         self.assertTrue(self.bill.manual_crop_enabled)
         self.assertEqual(self.bill.crop_left, 20)
+
+    def test_rotate_and_save_main_and_continuation_pages(self):
+        buffer = BytesIO()
+        Image.new('RGB', (40, 20), 'white').save(buffer, format='JPEG')
+        encoded = base64.b64encode(buffer.getvalue())
+        self.bill.original_file = encoded
+        page = self.env['shop.purchase.import.page'].create({
+            'import_id': self.bill.id, 'page_file': encoded, 'page_file_name': 'second.jpg',
+            'manual_crop_enabled': True, 'crop_left': 10,
+        })
+        self.bill.action_rotate_bill_image(1)
+        page.action_rotate_bill_image(3)
+        for record, field in ((self.bill, 'original_file'), (page, 'page_file')):
+            with Image.open(BytesIO(base64.b64decode(record[field]))) as rotated:
+                self.assertEqual(rotated.size, (20, 40))
+            self.assertFullImage(record)
