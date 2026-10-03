@@ -42,10 +42,12 @@ class TestLocalOCRPipeline(unittest.TestCase):
         with patch.object(ocr, "_image_from_bytes", return_value=image), \
              patch.object(ocr, "_get_tesseract_backend", return_value=backend), \
              patch.object(ocr, "_get_paddle_backend") as paddle, \
-             patch.object(ocr, "_ocr_page_candidate", return_value=("PaddleOCR Tamil+English", parsed, 1)):
+             patch.object(ocr, "_ocr_page_candidate", return_value=("PaddleOCR Tamil+English", parsed, 1)) as reader, \
+             patch.object(ocr.time, "monotonic", return_value=100):
             paddle.return_value.available.return_value = True
-            result, engine, fingerprint = ocr.extract_bill(b"image", "image/jpeg")
+            result, engine, fingerprint = ocr.extract_bill(b"image", "image/jpeg", time_budget=30)
         self.assertEqual(len(result["lines"]), 1)
+        self.assertEqual(reader.call_args.kwargs['deadline'], 130)
         backend.get_orientation.assert_not_called()
 
     def test_paddle_reserves_fallback_time(self):

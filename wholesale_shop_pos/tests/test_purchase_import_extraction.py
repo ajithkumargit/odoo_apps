@@ -1,10 +1,14 @@
 import base64
 from io import BytesIO
 import json
+from pathlib import Path
+import runpy
 from unittest.mock import patch
 
 from odoo.exceptions import UserError
 from odoo.tests.common import TransactionCase
+from odoo.tools import mute_logger
+from ..models.purchase_import import OCR_LOCK_NAMESPACE
 from PIL import Image
 
 
@@ -50,24 +54,70 @@ class TestPurchaseImportExtraction(TransactionCase):
             "original_file_name": "bill.png",
         })
 
-    def test_extraction_is_queued_and_cron_processes_one_bill_at_a_time(self):
-        first = self._new_import()
-        second = self._new_import()
-        (first | second).write({'vendor_id': self.vendor.id})
-        first.action_extract_bill()
-        second.action_extract_bill()
-        self.assertEqual((first.extraction_status, second.extraction_status), ('queued', 'queued'))
+    def _mock_extracted_bill(self):
+        return ({'lines': [{'description': 'OCR queue recovery item', 'quantity': 2,
+                            'purchase_rate': 10}]}, 'test', 'fingerprint')
 
-        def finish_bill(bill, _data, _engine, _fingerprint):
-            bill.extraction_status = 'done'
+    def test_upgrade_clears_legacy_queue_without_changing_crop(self):
+        bill = self._new_import()
+        bill.write({'extraction_status': 'queued', 'manual_crop_enabled': True,
+                    'crop_left': 10, 'crop_right': 80})
+        bill.flush_recordset()
+        migration = Path(__file__).parents[1] / 'migrations' / '19.0.1.65.0' / 'post-migration.py'
+        runpy.run_path(str(migration))['migrate'](self.env.cr, '19.0.1.64.0')
+        bill.invalidate_recordset()
+        self.assertEqual(bill.extraction_status, 'not_extracted')
+        self.assertTrue(bill.manual_crop_enabled)
+        self.assertEqual((bill.crop_left, bill.crop_right), (10, 80))
 
-        with patch.object(type(first), '_prepare_combined_bill', return_value=(b'bill', 'image/png')), \
-             patch.object(type(first), '_extract_bill_locally', return_value=({}, 'test', 'fingerprint')), \
-             patch.object(type(first), '_apply_extracted_bill', finish_bill):
-            first._cron_extract_queued_bills()
-            self.assertEqual((first.extraction_status, second.extraction_status), ('done', 'queued'))
-            first._cron_extract_queued_bills()
-        self.assertEqual(second.extraction_status, 'done')
+    def test_direct_extraction_recovers_queued_bill_and_uses_current_crop(self):
+        bill = self._new_import()
+        buffer = BytesIO()
+        Image.new('RGB', (200, 100), 'white').save(buffer, format='PNG')
+        bill.write({'vendor_id': self.vendor.id, 'original_file': base64.b64encode(buffer.getvalue()),
+                    'extraction_status': 'queued', 'manual_crop_enabled': True,
+                    'crop_left': 0, 'crop_top': 0, 'crop_right': 50, 'crop_bottom': 100})
+        with patch('odoo.addons.wholesale_shop_pos.models.purchase_import.extract_bill',
+                   return_value=self._mock_extracted_bill()) as reader:
+            action = bill.action_extract_bill()
+        self.assertEqual(action['params']['type'], 'success')
+        self.assertEqual(bill.extraction_status, 'done')
+        self.assertEqual(len(bill.line_ids), 1)
+        with Image.open(BytesIO(reader.call_args.args[0])) as cropped:
+            self.assertEqual(cropped.size, (100, 100))
+        self.assertGreater(reader.call_args.kwargs['time_budget'], 0)
+        self.assertLessEqual(reader.call_args.kwargs['time_budget'], 45)
+        self.assertFalse(self.env.ref('wholesale_shop_pos.ir_cron_shop_extract_queued_bills').active)
+
+    @mute_logger('odoo.addons.wholesale_shop_pos.models.purchase_import')
+    def test_direct_extraction_failure_remains_retryable(self):
+        bill = self._new_import()
+        bill.write({'vendor_id': self.vendor.id, 'extraction_status': 'queued'})
+        with patch.object(type(bill), '_extract_bill_locally', side_effect=UserError('OCR timed out')):
+            action = bill.action_extract_bill()
+        self.assertEqual(action['params']['type'], 'danger')
+        self.assertEqual(bill.extraction_status, 'failed')
+        self.assertEqual(bill.extraction_error, 'OCR timed out')
+        self.assertFalse(bill.line_ids)
+        with patch.object(type(bill), '_extract_bill_locally', return_value=self._mock_extracted_bill()):
+            bill.action_extract_bill()
+        self.assertEqual(bill.extraction_status, 'done')
+        self.assertFalse(bill.extraction_error)
+
+    def test_direct_extraction_rejects_concurrent_worker_without_waiting(self):
+        bill = self._new_import()
+        bill.vendor_id = self.vendor
+        with self.registry.cursor() as other_cr:
+            other_cr.execute('SELECT pg_try_advisory_xact_lock(%s, 0)', (OCR_LOCK_NAMESPACE,))
+            self.assertTrue(other_cr.fetchone()[0])
+            with patch.object(type(bill), '_extract_bill_locally') as reader:
+                with self.assertRaisesRegex(UserError, 'Another bill'):
+                    bill.action_extract_bill()
+                reader.assert_not_called()
+        self.assertEqual(bill.extraction_status, 'not_extracted')
+        with patch.object(type(bill), '_extract_bill_locally', return_value=self._mock_extracted_bill()):
+            bill.action_extract_bill()
+        self.assertEqual(bill.extraction_status, 'done')
 
     def test_existing_regular_variant_gets_bill_cost_and_mrp_sale_on_review(self):
         attribute = self.env['product.attribute'].create({'name': 'Regular pack size'})

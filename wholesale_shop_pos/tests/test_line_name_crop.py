@@ -30,7 +30,7 @@ class TestLineNameCrop(TransactionCase):
         result = {'text': 'Product Name', 'engine': 'test'}
         with patch.object(purchase_import, 'extract_product_name', return_value=result) as extractor:
             self.assertEqual(self.bill.extract_cropped_product_name(base64.b64encode(b'crop').decode()), result)
-            extractor.assert_called_once_with(b'crop')
+            extractor.assert_called_once_with(b'crop', time_budget=self.bill._ocr_request_budget())
         self.assertEqual(self.bill.original_file, original)
         self.assertFalse(self.bill.line_ids)
 

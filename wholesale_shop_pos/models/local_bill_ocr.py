@@ -2827,11 +2827,12 @@ def _best_candidate(candidates):
     return max(tamil_candidates or candidates, key=lambda item: _candidate_score(item[1]))
 
 
-def _extract_bill(file_bytes, mimetype):
+def _extract_bill(file_bytes, mimetype, time_budget=None):
     """Extract a normalized bill dictionary without any external network call."""
     if not file_bytes:
         raise LocalOCRError("The uploaded bill is empty.")
-    file_deadline = time.monotonic() + OCR_FILE_BUDGET_SECONDS
+    budget = OCR_FILE_BUDGET_SECONDS if time_budget is None else min(OCR_FILE_BUDGET_SECONDS, max(1, time_budget))
+    file_deadline = time.monotonic() + budget
 
     page_inputs = (
         _pdf_pages(file_bytes)
@@ -2961,7 +2962,7 @@ def _extract_bill(file_bytes, mimetype):
     return result, result["_audit"]["engine"], fingerprint
 
 
-def extract_bill(file_bytes, mimetype, header_aliases=None, template_config=None):
+def extract_bill(file_bytes, mimetype, header_aliases=None, template_config=None, time_budget=None):
     """Extract a bill while applying request-local configurable headings."""
     template_config = template_config or None
     aliases = (
@@ -2972,23 +2973,24 @@ def extract_bill(file_bytes, mimetype, header_aliases=None, template_config=None
     token = _HEADER_ALIASES.set(aliases)
     template_token = _OCR_TEMPLATE.set(template_config)
     try:
-        return _extract_bill(file_bytes, mimetype)
+        return _extract_bill(file_bytes, mimetype, time_budget=time_budget)
     finally:
         _OCR_TEMPLATE.reset(template_token)
         _HEADER_ALIASES.reset(token)
 
 
-def extract_product_name(file_bytes):
+def extract_product_name(file_bytes, time_budget=45):
     """Read a name crop without requiring invoice metadata or table columns."""
     import cv2
+    deadline = time.monotonic() + max(1, time_budget)
     image = _image_from_bytes(file_bytes)
     image = _resize_for_ocr(image, target_width=1400, max_side=2000)
     image = cv2.copyMakeBorder(image, 24, 24, 24, 24, cv2.BORDER_CONSTANT, value=(255, 255, 255))
     paddle = _get_paddle_backend()
     failure = ""
-    if paddle.available():
+    if paddle.available() and deadline - time.monotonic() > 10:
         try:
-            rows = paddle.recognize(image, timeout=90)
+            rows = paddle.recognize(image, timeout=max(1, deadline - time.monotonic() - 10))
             tokens = [_token(row["text"], row["score"], row["box"])
                       for row in rows if row["score"] >= MIN_OCR_SCORE]
             text = _normalise_space(" ".join(line["text"] for line in _group_lines([t for t in tokens if t])))
@@ -2999,7 +3001,10 @@ def extract_product_name(file_bytes):
     backend = _get_tesseract_backend()
     try:
         for psm in (7, 6):
-            tokens = backend.run_tesseract(image, page=1, psm=psm, timeout=20)
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise LocalOCRError("Product name extraction timed out. Please retry with a tighter crop.")
+            tokens = backend.run_tesseract(image, page=1, psm=psm, timeout=min(20, remaining))
             text = _normalise_space(" ".join(line["text"] for line in _group_lines(tokens)))
             if text:
                 return {"text": text, "engine": "Tesseract Tamil+English"}

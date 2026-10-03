@@ -40,6 +40,7 @@ class TestBillImageReplacement(TransactionCase):
         self.assertEqual(self.bill.crop_left, 20)
 
     def test_rotate_and_save_main_and_continuation_pages(self):
+        self.bill.extraction_status = 'queued'
         buffer = BytesIO()
         Image.new('RGB', (40, 20), 'white').save(buffer, format='JPEG')
         encoded = base64.b64encode(buffer.getvalue())

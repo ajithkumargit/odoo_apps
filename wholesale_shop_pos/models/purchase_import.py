@@ -4,12 +4,14 @@ import json
 import logging
 import mimetypes
 import re
+import time
 from pathlib import Path
 from difflib import SequenceMatcher
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 from odoo.tools.float_utils import float_compare
+from odoo.tools import config
 
 from .local_bill_ocr import LocalOCRError, extract_bill, extract_product_name
 
@@ -26,6 +28,7 @@ SUPPORTED_BILL_MIMETYPES = {
 MAX_BILL_FILE_SIZE = 20 * 1024 * 1024
 MAX_BILL_TOTAL_SIZE = 100 * 1024 * 1024
 MAX_BILL_DOCUMENTS = 20
+OCR_LOCK_NAMESPACE = 724013
 
 
 def _rotated_bill_image(binary_value, filename, turns):
@@ -171,7 +174,7 @@ class ShopPurchaseImport(models.Model):
 
     def action_rotate_bill_image(self, turns):
         self.ensure_one()
-        if self.state == "cancelled" or self.extraction_status == "queued":
+        if self.state == "cancelled":
             raise UserError(_("This bill image cannot be changed now."))
         if not self.original_file:
             raise UserError(_("Upload the first bill page before rotating it."))
@@ -203,6 +206,8 @@ class ShopPurchaseImport(models.Model):
     def extract_cropped_product_name(self, image_data):
         self.ensure_one()
         self.check_access("read")
+        if not self._try_ocr_lock(0):
+            raise UserError(_("Another bill is currently being extracted. Please retry after it finishes."))
         if not isinstance(image_data, str) or not image_data or len(image_data) > 14 * 1024 * 1024:
             raise UserError(_("Use a cropped image smaller than 10 MB."))
         try:
@@ -212,7 +217,7 @@ class ShopPurchaseImport(models.Model):
         if len(content) > 10 * 1024 * 1024:
             raise UserError(_("Use a cropped image smaller than 10 MB."))
         try:
-            return extract_product_name(content)
+            return extract_product_name(content, time_budget=self._ocr_request_budget())
         except LocalOCRError as error:
             raise UserError(str(error)) from error
 
@@ -445,6 +450,8 @@ class ShopPurchaseImport(models.Model):
             raise UserError(_("The uploaded bill pages could not be combined.")) from error
 
     def _extract_bill_locally(self, file_bytes, mimetype):
+        if not self._try_ocr_lock(0):
+            raise UserError(_("Another bill is currently being extracted. Please retry after it finishes."))
         if not self.vendor_id:
             raise UserError(_("Select the vendor before extracting the bill so its OCR template can be used."))
         templates = self.env["shop.bill.ocr.template"].ensure_for_vendor(
@@ -465,6 +472,7 @@ class ShopPurchaseImport(models.Model):
                 file_bytes,
                 mimetype,
                 template_config=template.get_extraction_config(),
+                time_budget=self.env.context.get("shop_ocr_time_budget", self._ocr_request_budget()),
             )
         except LocalOCRError as error:
             raise UserError(_("Local bill extraction failed: %s", str(error))) from error
@@ -656,55 +664,75 @@ class ShopPurchaseImport(models.Model):
         self.with_context(shop_bill_cost_defer=True).write(values)
         self.action_match_products()
 
-    def action_extract_bill(self):
+    def _check_extraction_input(self):
         self.ensure_one()
+        self.check_access("write")
         if self.state not in ("draft", "review"):
             raise UserError(_("Only uploaded or review-stage bills can be extracted."))
         if self.line_ids:
             raise UserError(_("Remove the existing bill lines before extracting the file again."))
-        if self.extraction_status == "queued":
-            raise UserError(_("This bill is already queued for extraction."))
         if not self.vendor_id:
             raise UserError(_("Select the vendor before extracting the bill."))
         if not self.original_file and not self.page_ids:
             raise UserError(_("Upload a bill image or PDF before extracting."))
-        self.write({"extraction_status": "queued", "extraction_error": False})
+
+    def _try_ocr_lock(self, record_id):
+        # Transaction locks disappear automatically on completion or worker death.
+        self.env.cr.execute("SELECT pg_try_advisory_xact_lock(%s, %s)", (OCR_LOCK_NAMESPACE, record_id))
+        return self.env.cr.fetchone()[0]
+
+    def action_extract_bill(self):
+        self._check_extraction_input()
+        if not self._try_ocr_lock(0):
+            raise UserError(_("Another bill is currently being extracted. Please retry after it finishes."))
+        self.invalidate_recordset(["line_ids", "state", "extraction_status"])
+        self._run_bill_extraction()
+        failed = self.extraction_status == "failed"
 
         return {
             "type": "ir.actions.client",
             "tag": "display_notification",
             "params": {
-                "title": _("Bill queued"),
-                "message": _("Extraction will run in the background. Refresh this bill shortly to review the lines."),
-                "type": "info",
-                "sticky": False,
+                "title": _("Extraction failed") if failed else _("Bill extracted"),
+                "message": self.extraction_error if failed else _("Review the extracted bill lines before continuing."),
+                "type": "danger" if failed else "success",
+                "sticky": failed,
                 "next": {"type": "ir.actions.client", "tag": "soft_reload"},
             },
         }
 
-    @api.model
-    def _cron_extract_queued_bills(self):
-        """Run one OCR job per cron tick, away from HTTP request workers."""
-        self.flush_model(["extraction_status", "state"])
-        self.env.cr.execute("""
-            SELECT id FROM shop_purchase_import
-            WHERE extraction_status = 'queued' AND state IN ('draft', 'review')
-            ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED
-        """)
-        row = self.env.cr.fetchone()
-        if not row:
-            return
-        bill = self.browse(row[0])
+    def _ocr_request_budget(self):
+        # Leave time for image preparation and saving results before Odoo kills
+        # the worker. The default 210s OCR budget exceeded Odoo's default 120s.
+        limit = config["limit_time_real"]
+        return min(45, max(1, limit - 30)) if limit and limit > 0 else 45
+
+    def _run_bill_extraction(self):
+        self.ensure_one()
+        budget = self._ocr_request_budget()
+        started = time.monotonic()
+        _logger.info("Starting bill OCR for %s (%s), budget=%ss", self.name, self.id, budget)
         try:
             with self.env.cr.savepoint():
-                if bill.line_ids:
-                    raise UserError(_("Existing bill lines must be removed before extraction."))
-                file_bytes, mimetype = bill._prepare_combined_bill()
-                extracted_data, engine, fingerprint = bill._extract_bill_locally(file_bytes, mimetype)
-                bill._apply_extracted_bill(extracted_data, engine, fingerprint)
+                self._check_extraction_input()
+                file_bytes, mimetype = self._prepare_combined_bill()
+                remaining = budget - (time.monotonic() - started)
+                if remaining < 5:
+                    raise UserError(_("Preparing the images exceeded the extraction time limit. Crop the bill or extract fewer pages and retry."))
+                data, engine, fingerprint = self.with_context(shop_ocr_time_budget=remaining)._extract_bill_locally(file_bytes, mimetype)
+                self._apply_extracted_bill(data, engine, fingerprint)
+                self.extraction_error = False
         except Exception as error:
-            _logger.exception("Background OCR failed for bill import %s", bill.id)
-            bill.write({"extraction_status": "failed", "extraction_error": str(error)[:2000]})
+            _logger.exception("Bill OCR failed for %s", self.id)
+            self.write({"extraction_status": "failed", "extraction_error":
+                        str(error)[:2000] if isinstance(error, UserError) else
+                        _("Extraction failed. Please retry; the server log contains the error details.")})
+        _logger.info("Bill OCR finished for %s: %s in %.1fs", self.id, self.extraction_status, time.monotonic() - started)
+
+    @api.model
+    def _cron_extract_queued_bills(self):
+        """Compatibility for the retired cron until the module is upgraded."""
+        return False
 
     def action_match_products(self):
         Product = self.env["product.product"]
@@ -1035,7 +1063,7 @@ class ShopPurchaseImportPage(models.Model):
 
     def action_rotate_bill_image(self, turns):
         self.ensure_one()
-        if self.import_id.state == "cancelled" or self.import_id.extraction_status == "queued":
+        if self.import_id.state == "cancelled":
             raise UserError(_("This bill image cannot be changed now."))
         image, filename = _rotated_bill_image(self.page_file, self.page_file_name, turns)
         self.write({"page_file": image, "page_file_name": filename})
