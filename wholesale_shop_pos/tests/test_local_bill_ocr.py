@@ -121,6 +121,91 @@ class TestLocalBillOCRParser(TransactionCase):
         self.assertEqual([line['purchase_rate'] for line in parsed['lines']], [18.28, 101.70])
         self.assertEqual([line['gst_percent'] for line in parsed['lines']], [5, 18])
 
+    def test_taxable_only_goods_table_recovers_unit_rate(self):
+        aliases = {
+            'hsn': ['HSN Code'], 'description': ['Product Name & Desc'],
+            'quantity': ['Quantity'], 'taxable': ['Taxable Amt'],
+            'gst': ['Tax Rate (C+S)'],
+        }
+        tokens = [
+            self._token('HSN Code', 10, 190, 85),
+            self._token('Product Name & Desc', 160, 190, 230),
+            self._token('Quantity', 1110, 190, 85),
+            self._token('Taxable Amt', 1410, 190, 120),
+            self._token('Tax Rate (C+S)', 1590, 190, 160),
+        ]
+        for y, name, quantity, amount in [
+            (245, '5.00 Nice Jar (25 Pcs)', '12 PCS', '914.28'),
+            (290, '5.00 Kadalai Mittai Jar (Pouch) - 60 Pcs', '6 PCS', '1,000.02'),
+            (335, '1.00 Kadalai Mittai (20 Pcs)', '100 PAC', '1,333.00'),
+        ]:
+            tokens += [self._token('21069099', 10, y, 100),
+                       self._token(name, 160, y, 700),
+                       self._token(quantity, 1110, y, 100),
+                       self._token(amount, 1410, y, 110),
+                       self._token('2.50+2.50', 1590, y, 120)]
+        tokens.append(self._token('Total Inv Amt', 1300, 390, 130))
+        alias_token = local_bill_ocr._HEADER_ALIASES.set(aliases)
+        template_token = local_bill_ocr._OCR_TEMPLATE.set({
+            'strict': True, 'aliases': aliases, 'data_rows_per_item': 1,
+        })
+        try:
+            parsed = local_bill_ocr._parse_page(tokens, 1800, 450)
+        finally:
+            local_bill_ocr._OCR_TEMPLATE.reset(template_token)
+            local_bill_ocr._HEADER_ALIASES.reset(alias_token)
+        self.assertEqual(len(parsed['lines']), 3, parsed['warnings'])
+        self.assertEqual([line['quantity'] for line in parsed['lines']], [12, 6, 100])
+        self.assertEqual([line['purchase_rate'] for line in parsed['lines']], [76.19, 166.67, 13.33])
+        self.assertEqual([line['gst_percent'] for line in parsed['lines']], [5, 5, 5])
+
+    def test_box_count_does_not_change_explicit_jar_quantity(self):
+        aliases = {
+            'serial': ['Sl No'], 'description': ['Description of Goods'],
+            'hsn': ['HSN/SAC'], 'quantity': ['Quantity'],
+            'tax_inclusive_rate': ['Rate (Incl. of Tax)', 'Net Rate'],
+            'rate': ['Basic Rate per'], 'case': ['Boxes'], 'net': ['Amount'],
+        }
+        tokens = [
+            self._token('Sl No', 10, 190, 45),
+            self._token('Description of Goods', 80, 190, 220),
+            self._token('HSN/SAC', 420, 190, 100),
+            self._token('Quantity', 610, 190, 90),
+            self._token('Rate (Incl. of Tax)', 760, 190, 160),
+            self._token('Boxes', 930, 190, 70),
+            self._token('Net Rate', 1010, 190, 90),
+            self._token('Basic Rate per', 1170, 190, 130),
+            self._token('Amount', 1350, 190, 90),
+        ]
+        for y, number, name, qty, inclusive, rate, amount in [
+            (245, 1, '5.00 Nice Jar (25 Pcs)', '12 Jar', '80.00', '76.19', '914.28'),
+            (290, 2, '5.00 Kadalai Mittai Jar (Pouch)', '6 Jar', '175.00', '166.67', '1,000.02'),
+            (335, 3, '1.00 Kadalai Mittai (20 Pcs)', '100 Pkt', '14.00', '13.33', '1,333.00'),
+        ]:
+            tokens += [self._token(str(number), 10, y, 30),
+                       self._token(name, 80, y, 300),
+                       self._token('21069099', 420, y, 90),
+                       self._token(qty, 610, y, 90),
+                       self._token(inclusive, 760, y, 70),
+                       self._token('1', 930, y, 25),
+                       self._token(inclusive, 1010, y, 70),
+                       self._token(rate, 1170, y, 70),
+                       self._token(amount, 1350, y, 100)]
+        tokens.append(self._token('Total', 80, 390, 70))
+        alias_token = local_bill_ocr._HEADER_ALIASES.set(aliases)
+        template_token = local_bill_ocr._OCR_TEMPLATE.set({
+            'strict': True, 'aliases': aliases, 'data_rows_per_item': 1,
+        })
+        try:
+            parsed = local_bill_ocr._parse_page(tokens, 1500, 450)
+        finally:
+            local_bill_ocr._OCR_TEMPLATE.reset(template_token)
+            local_bill_ocr._HEADER_ALIASES.reset(alias_token)
+        self.assertEqual(len(parsed['lines']), 3, parsed['warnings'])
+        self.assertEqual([line['quantity'] for line in parsed['lines']], [12, 6, 100])
+        self.assertEqual([line['purchase_rate'] for line in parsed['lines']], [76.19, 166.67, 13.33])
+        self.assertEqual([line['gst_percent'] for line in parsed['lines']], [5, 5, 5])
+
     def test_coordinate_parser_extracts_metadata_and_table_values(self):
         tokens = [
             self._token("SNK PILLAI AGENCIES", 15, 30, 190),

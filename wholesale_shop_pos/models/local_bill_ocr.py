@@ -1345,7 +1345,7 @@ def _labelled_column_number(tokens):
     # If OCR misses the narrow `per` header, its CASE/PCS value may be
     # assigned to the adjacent Rate column. Treat it as a harmless unit.
     if not re.fullmatch(
-        r"\d[\d,]*(?:\.\d+)?\s*%?\s*(?:PCS?|PIECES?|CASES?|NOS?|KG|G|LTRS?|LIT(?:RE|ER)S?)?",
+        r"\d[\d,]*(?:\.\d+)?\s*%?\s*(?:PCS?|PIECES?|CASES?|NOS?|JARS?|PKTS?|PACKS?|PAC|KG|G|LTRS?|LIT(?:RE|ER)S?)?",
         text,
         re.IGNORECASE,
     ):
@@ -1833,13 +1833,19 @@ def _extract_labelled_table_lines(tokens, page_width, header):
     for token in labelled:
         role = _table_header_role(token["text"])
         positions.setdefault(role, []).append(token["xc"])
-    if not {"description", "quantity", "rate"}.issubset(positions):
-        return [], ["Product, quantity and unit-price columns must be readable to extract this bill safely."]
+    if not {"description", "quantity"}.issubset(positions) or not ({"rate", "taxable"} & positions.keys()):
+        return [], ["Product, quantity, and either unit price or taxable amount must be readable to extract this bill safely."]
     centres = {role: sum(values) / len(values) for role, values in positions.items()}
+    if len(positions.get("tax_inclusive_rate", [])) > 1:
+        # Some bills print both "Rate (Incl. of Tax)" and "Net Rate" with
+        # Boxes between them. Their average is a different column entirely.
+        # The rightmost inclusive rate is beside the basic rate used below.
+        centres["tax_inclusive_rate"] = max(positions["tax_inclusive_rate"])
     roles = sorted(centres, key=centres.get)
     slope = _table_header_slope(labelled, page_width)
     rate_first = (
-        centres["rate"] < centres["description"] < centres["quantity"]
+        "rate" in centres
+        and centres["rate"] < centres["description"] < centres["quantity"]
         and "net" in centres and centres["net"] > centres["quantity"]
         and set(roles).issubset({"serial", "rate", "description", "quantity", "net"})
     )
@@ -1913,7 +1919,7 @@ def _extract_labelled_table_lines(tokens, page_width, header):
     pending_numeric_row = None
     quantity_pattern = re.compile(
         r"(\d+(?:\.\d+)?)(?:\s*\+\s*(\d+(?:\.\d+)?))?"
-        r"\s*(?:PCS?|PIECES?|CASES?|BAGS?|NOS?|KG|G|LTRS?|LIT(?:RE|ER)S?)?",
+        r"\s*(?:PCS?|PIECES?|CASES?|BAGS?|NOS?|JARS?|PKTS?|PACKS?|PAC|KG|G|LTRS?|LIT(?:RE|ER)S?)?",
         re.IGNORECASE,
     )
 
@@ -1964,7 +1970,7 @@ def _extract_labelled_table_lines(tokens, page_width, header):
             columns["serial"] = [token for token in columns["serial"] if token not in names]
         description = _description(columns["description"])
         quantity_text, quantity_match = quantity_match_for(columns["quantity"], row["yc"])
-        rate = _labelled_column_number(columns["rate"])
+        rate = _labelled_column_number(columns.get("rate", []))
         if rate_first and rate is not None and rate > 0:
             amount = _labelled_column_number(columns["net"])
             unit_text = " ".join(t["text"] for t in columns["quantity"])
@@ -2006,7 +2012,15 @@ def _extract_labelled_table_lines(tokens, page_width, header):
             )
             description = _description(columns["description"])
             quantity_text, quantity_match = quantity_match_for(columns["quantity"], row["yc"])
-            rate = _labelled_column_number(columns["rate"])
+            rate = _labelled_column_number(columns.get("rate", []))
+        if rate is None and "rate" not in columns and quantity_match:
+            # Some invoices omit the unit rate but print a tax-exclusive
+            # taxable amount for each row. Recover only from that labelled
+            # amount and a positive, explicit quantity.
+            taxable = _labelled_column_number(columns.get("taxable", []))
+            quantity_value = _parse_float(quantity_match.group(1))
+            if taxable is not None and quantity_value > 0:
+                rate = round(taxable / quantity_value, 6)
         if not description and (quantity_text or rate is not None):
             pending_numeric_row = row
             continue
@@ -2032,8 +2046,14 @@ def _extract_labelled_table_lines(tokens, page_width, header):
             if cases:
                 units_per_case = _labelled_column_number(columns.get("upc", []))
                 if units_per_case is None or units_per_case <= 0:
-                    warnings.append("Skipped OCR row %s: case quantity needs a readable units-per-case column." % index)
-                    continue
+                    if quantity > 0:
+                        # "Boxes" can be an informational package count on
+                        # an invoice already billed as jars, packs or pieces.
+                        warnings.append("Box count was kept separate from the printed item quantity for OCR row %s." % index)
+                        units_per_case = 0
+                    else:
+                        warnings.append("Skipped OCR row %s: case quantity needs a readable units-per-case column." % index)
+                        continue
                 quantity += cases * units_per_case
         if "free_quantity" in columns:
             free_tokens = columns["free_quantity"]
@@ -2051,6 +2071,11 @@ def _extract_labelled_table_lines(tokens, page_width, header):
             continue
 
         gst = _labelled_column_number(columns.get("gst", []))
+        if gst is None and columns.get("gst"):
+            printed = _normalise_space(" ".join(token["text"] for token in columns["gst"]))
+            components = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*\+\s*(\d+(?:\.\d+)?)\s*%?\s*", printed)
+            if components:
+                gst = float(components[1]) + float(components[2])
         if gst is None:
             integrated = _labelled_column_number(columns.get("igst_percent", []))
             central = _labelled_column_number(columns.get("cgst_percent", []))
@@ -2059,6 +2084,13 @@ def _extract_labelled_table_lines(tokens, page_width, header):
                 gst = integrated
             elif central is not None and state is not None:
                 gst = central + state
+        if gst is None and rate and columns.get("tax_inclusive_rate"):
+            inclusive_rate = _labelled_column_number(columns["tax_inclusive_rate"])
+            if inclusive_rate is not None and inclusive_rate >= rate:
+                inferred_gst = (inclusive_rate / rate - 1.0) * 100.0
+                if 0 <= inferred_gst <= 100:
+                    nearest = round(inferred_gst)
+                    gst = float(nearest) if abs(inferred_gst - nearest) < 0.1 else round(inferred_gst, 2)
         if gst is None:
             gst = global_gst
         if gst is None or not 0 <= gst <= 100:
